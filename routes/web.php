@@ -3,10 +3,14 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ItemController;
+use App\Http\Controllers\ItemPriceController;
 use App\Http\Controllers\LookupController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OgsImportController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +43,35 @@ Route::middleware('menu.access:/Department/Index')->group(function () {
     Route::post('/Department/AddEdit', [DepartmentController::class, 'addEdit']);
     Route::post('/Department/DeleteMultiple', [DepartmentController::class, 'deleteMultiple']);
     Route::get('/Department/DownloadExcel', [DepartmentController::class, 'downloadExcel']);
+});
+
+// ---------- OGS Data ----------
+
+Route::middleware('menu.access:/OgsImport/Index')->group(function () {
+    Route::get('/OgsImport/Index', [OgsImportController::class, 'index']);
+    Route::post('/OgsImport/Search', [OgsImportController::class, 'search']);
+    Route::post('/OgsImport/GetByKey', [OgsImportController::class, 'getByKey']);
+    Route::post('/OgsImport/Upload', [OgsImportController::class, 'upload']);
+});
+
+Route::middleware('menu.access:/Item/Index')->group(function () {
+    Route::get('/Item/Index', [ItemController::class, 'index']);
+    Route::post('/Item/Search', [ItemController::class, 'search']);
+    Route::get('/Item/DownloadExcel', [ItemController::class, 'downloadExcel']);
+});
+
+Route::middleware('menu.access:/Supplier/Index')->group(function () {
+    Route::get('/Supplier/Index', [SupplierController::class, 'index']);
+    Route::post('/Supplier/Search', [SupplierController::class, 'search']);
+    Route::post('/Supplier/GetByKey', [SupplierController::class, 'getByKey']);
+    Route::post('/Supplier/AddEdit', [SupplierController::class, 'addEdit']);
+    Route::get('/Supplier/DownloadExcel', [SupplierController::class, 'downloadExcel']);
+});
+
+Route::middleware('menu.access:/ItemPrice/Index')->group(function () {
+    Route::get('/ItemPrice/Index', [ItemPriceController::class, 'index']);
+    Route::post('/ItemPrice/Search', [ItemPriceController::class, 'search']);
+    Route::get('/ItemPrice/DownloadExcel', [ItemPriceController::class, 'downloadExcel']);
 });
 
 // ---------- Administration ----------
@@ -77,6 +110,7 @@ Route::middleware('menu.access:/Menu/Index')->group(function () {
 Route::middleware('menu.access')->group(function () {
     Route::get('/Lookup/Department', [LookupController::class, 'department']);
     Route::get('/Lookup/Role', [LookupController::class, 'role']);
+    Route::get('/Lookup/Supplier', [LookupController::class, 'supplier']);
     Route::get('/Lookup/UserList', [LookupController::class, 'userList']);
 
     Route::post('/Notification/List', [NotificationController::class, 'list']);

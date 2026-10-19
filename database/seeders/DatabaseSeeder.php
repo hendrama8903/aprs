@@ -51,6 +51,22 @@ class DatabaseSeeder extends Seeder
         $department = Menu::firstOrCreate(['menu_url' => '/Department/Index'], [
             'parent_menu_id' => $masterData->menu_id, 'menu_type' => 'SCREEN', 'menu_name' => 'Department', 'menu_icon' => 'fa-building', 'sort_order' => 10, 'created_by' => $by,
         ]);
+        $ogsData = Menu::firstOrCreate(['parent_menu_id' => null, 'menu_name' => 'OGS Data'], [
+            'menu_type' => 'MENU', 'menu_icon' => 'fa-cloud-download', 'sort_order' => 30, 'created_by' => $by,
+        ]);
+        $ogsImport = Menu::firstOrCreate(['menu_url' => '/OgsImport/Index'], [
+            'parent_menu_id' => $ogsData->menu_id, 'menu_type' => 'SCREEN', 'menu_name' => 'Import OGS', 'menu_icon' => 'fa-upload', 'sort_order' => 10, 'created_by' => $by,
+        ]);
+        $itemMenu = Menu::firstOrCreate(['menu_url' => '/Item/Index'], [
+            'parent_menu_id' => $ogsData->menu_id, 'menu_type' => 'SCREEN', 'menu_name' => 'Item', 'menu_icon' => 'fa-cube', 'sort_order' => 20, 'created_by' => $by,
+        ]);
+        $supplierMenu = Menu::firstOrCreate(['menu_url' => '/Supplier/Index'], [
+            'parent_menu_id' => $ogsData->menu_id, 'menu_type' => 'SCREEN', 'menu_name' => 'Supplier', 'menu_icon' => 'fa-truck', 'sort_order' => 30, 'created_by' => $by,
+        ]);
+        $itemPriceMenu = Menu::firstOrCreate(['menu_url' => '/ItemPrice/Index'], [
+            'parent_menu_id' => $ogsData->menu_id, 'menu_type' => 'SCREEN', 'menu_name' => 'Item Price', 'menu_icon' => 'fa-tags', 'sort_order' => 40, 'created_by' => $by,
+        ]);
+
         $user = Menu::firstOrCreate(['menu_url' => '/User/Index'], [
             'parent_menu_id' => $administration->menu_id, 'menu_type' => 'SCREEN', 'menu_name' => 'User', 'menu_icon' => 'fa-user', 'sort_order' => 10, 'created_by' => $by,
         ]);
@@ -65,6 +81,8 @@ class DatabaseSeeder extends Seeder
             ['menu' => $department, 'code' => 'DEPARTMENT-ADD', 'name' => 'Add'],
             ['menu' => $department, 'code' => 'DEPARTMENT-EDIT', 'name' => 'Edit'],
             ['menu' => $department, 'code' => 'DEPARTMENT-DELETE', 'name' => 'Delete'],
+            ['menu' => $ogsImport, 'code' => 'OGSIMPORT-UPLOAD', 'name' => 'Upload'],
+            ['menu' => $supplierMenu, 'code' => 'SUPPLIER-EDIT', 'name' => 'Edit'],
             ['menu' => $user, 'code' => 'USER-ADD', 'name' => 'Add'],
             ['menu' => $user, 'code' => 'USER-EDIT', 'name' => 'Edit'],
             ['menu' => $user, 'code' => 'USER-DELETE', 'name' => 'Delete'],
@@ -91,8 +109,11 @@ class DatabaseSeeder extends Seeder
         $admin->menus()->syncWithoutDetaching($allMenus->mapWithKeys(fn ($id) => [$id => ['created_by' => $by, 'created_at' => now()]]));
         $admin->permissions()->syncWithoutDetaching($allPermissions->mapWithKeys(fn ($id) => [$id => ['created_by' => $by, 'created_at' => now()]]));
 
-        // STAFF: Dashboard + Master Data.
-        $staffMenuIds = [$dashboard->menu_id, $masterData->menu_id, $department->menu_id];
+        // STAFF: Dashboard + Master Data + lihat data OGS.
+        $staffMenuIds = [
+            $dashboard->menu_id, $masterData->menu_id, $department->menu_id,
+            $ogsData->menu_id, $itemMenu->menu_id, $supplierMenu->menu_id, $itemPriceMenu->menu_id,
+        ];
         $staff->menus()->syncWithoutDetaching(array_fill_keys($staffMenuIds, ['created_by' => $by, 'created_at' => now()]));
         $staffPermissionIds = [
             $permissionModels['DEPARTMENT-ADD']->permission_id,

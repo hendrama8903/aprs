@@ -14,6 +14,10 @@ final class PermissionCodes
     public const DepartmentEdit = 'DEPARTMENT-EDIT';
     public const DepartmentDelete = 'DEPARTMENT-DELETE';
 
+    // ---------- OGS Data ----------
+    public const OgsImportUpload = 'OGSIMPORT-UPLOAD';
+    public const SupplierEdit = 'SUPPLIER-EDIT';
+
     // ---------- Administration ----------
     public const UserAdd = 'USER-ADD';
     public const UserEdit = 'USER-EDIT';

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Repositories\DepartmentRepo;
 use App\Repositories\RoleRepo;
+use App\Repositories\SupplierRepo;
 use App\Repositories\UserRepo;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +19,7 @@ class LookupController extends Controller
     public function __construct(
         private DepartmentRepo $departmentRepo,
         private RoleRepo $roleRepo,
+        private SupplierRepo $supplierRepo,
         private UserRepo $userRepo,
     ) {
     }
@@ -27,6 +29,14 @@ class LookupController extends Controller
         return $this->lookup($request, fn () => array_map(
             static fn ($d) => ['id' => (string) $d->DepartmentId, 'text' => $d->DepartmentCode . ' - ' . $d->DepartmentName],
             $this->departmentRepo->search($request->input('q'), true),
+        ));
+    }
+
+    public function supplier(Request $request): JsonResponse
+    {
+        return $this->lookup($request, fn () => array_map(
+            static fn ($s) => ['id' => (string) $s->SupplierId, 'text' => $s->SupplierCode . ' - ' . $s->SupplierName],
+            $this->supplierRepo->search($request->input('q'), true),
         ));
     }
 
