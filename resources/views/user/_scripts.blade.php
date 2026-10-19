@@ -2,17 +2,9 @@
     var gScreenMode = null;
 
     $(document).ready(function () {
-        HMA.select2("#filterDepartment", "{{ url('/Lookup/Department') }}", "All departments");
-        HMA.select2("#filterRole", "{{ url('/Lookup/Role') }}", "All roles");
         HMA.select2("#addEditDepartment", "{{ url('/Lookup/Department') }}", "Select department", "#modalAddEdit");
         HMA.select2("#addEditRole", "{{ url('/Lookup/Role') }}", "Select role", "#modalAddEdit");
         HMA.select2("#addEditSupervisor", "{{ url('/Lookup/UserList') }}", "Select supervisor", "#modalAddEdit");
-
-        $("#filterDepartment, #filterRole, #filterStatus").on("change", onSearch);
-        $("#btn_toggleFilters").on("click", function () {
-            $("#filterBar").toggleClass("show");
-            gGrid.option("height", HMA.gridHeight("#datagrid"));
-        });
 
         $("#btn_add").on("click", onAddPrepare);
         $("#btn_edit").on("click", function () {

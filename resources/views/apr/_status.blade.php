@@ -28,6 +28,11 @@
             return moment(from).format("MMM YYYY") + " - " + moment(to).format("MMM YYYY");
         }
 
-        return { labels: labels, badge: badge, pct: pct, period: period };
+        // Pilihan untuk filter kolom Status di grid.
+        function lookup() {
+            return $.map(labels, function (text, value) { return { value: value, text: text }; });
+        }
+
+        return { labels: labels, badge: badge, pct: pct, period: period, lookup: lookup };
     })();
 </script>

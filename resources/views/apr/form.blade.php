@@ -317,7 +317,7 @@
 
         // ---------- Grid detail ----------
         function buildDetailGrid() {
-            detailGrid = $("#detailGrid").addClass("sg-grid").dxDataGrid({
+            detailGrid = $("#detailGrid").addClass("sg-grid").dxDataGrid($.extend(HMA.filterDefaults(), {
                 dataSource: lines,
                 keyExpr: "ItemCode",
                 showBorders: true,
@@ -377,17 +377,16 @@
                         }
                     }
                 ]
-            }).dxDataGrid("instance");
+            })).dxDataGrid("instance");
         }
 
         function buildCandidateGrid() {
-            candidateGrid = $("#candidateGrid").addClass("sg-grid").dxDataGrid({
+            candidateGrid = $("#candidateGrid").addClass("sg-grid").dxDataGrid($.extend(HMA.filterDefaults(), {
                 dataSource: [],
                 keyExpr: "ItemCode",
                 showBorders: true,
                 columnAutoWidth: true,
                 height: 460,
-                searchPanel: { visible: true, width: 240, placeholder: "Search..." },
                 selection: { mode: "multiple", showCheckBoxesMode: "always", allowSelectAll: true },
                 paging: { pageSize: 50 },
                 columns: [
@@ -402,7 +401,7 @@
                     { dataField: "PoAvgPrice", caption: "PO Avg", dataType: "number", format: "#,##0.##" },
                     { dataField: "PoMaxPrice", caption: "PO Max", dataType: "number", format: "#,##0.##" }
                 ]
-            }).dxDataGrid("instance");
+            })).dxDataGrid("instance");
         }
 
         // ---------- Form ----------

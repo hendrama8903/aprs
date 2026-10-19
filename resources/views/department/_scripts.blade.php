@@ -14,9 +14,6 @@
             remove: "{{ url('/Department/DeleteMultiple') }}",
             exportExcel: "{{ url('/Department/DownloadExcel') }}"
         },
-        params: function () {
-            return { isActive: $("#filterStatus").val() };
-        },
         columns: [
             { dataField: "DepartmentCode", caption: "Department Code", fixed: true, fixedPosition: "left" },
             { dataField: "DepartmentName", caption: "Department Name" },
@@ -47,7 +44,4 @@
         }
     });
 
-    $(function () {
-        $("#filterStatus").on("change", gPage.search);
-    });
 </script>

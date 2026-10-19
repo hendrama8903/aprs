@@ -36,6 +36,17 @@ var HMA = (function ($) {
         return Math.max(minHeight || 300, $(window).height() - $grid.offset().top - 40);
     }
 
+    // Standar filter semua grid/treelist: baris filter di bawah header setiap kolom.
+    // Tidak ada search panel, column chooser, maupun bar filter terpisah di atas grid.
+    function filterDefaults() {
+        return {
+            filterRow: { visible: true, applyFilter: "auto", showOperationChooser: true, resetOperationText: "Reset" },
+            headerFilter: { visible: false },
+            searchPanel: { visible: false },
+            columnChooser: { enabled: false }
+        };
+    }
+
     // Grid standar: data diambil sekali dari url (POST), filter/paging di client.
     //   cfg.key      : nama field primary key
     //   cfg.url      : endpoint Search
@@ -77,8 +88,6 @@ var HMA = (function ($) {
             columnResizingMode: "widget",
             noDataText: "Data not found.",
             height: gridHeight(selector),
-            headerFilter: { visible: true },
-            searchPanel: { visible: true, width: 240, placeholder: "Search..." },
             selection: { mode: "multiple", showCheckBoxesMode: "always", allowSelectAll: true },
             paging: { pageSize: 25 },
             pager: {
@@ -89,12 +98,11 @@ var HMA = (function ($) {
                 showInfo: true,
                 showNavigationButtons: true
             },
-            columnChooser: { enabled: true, mode: "select" },
             columnFixing: { enabled: true },
             onSelectionChanged: function (e) {
                 if (cfg.onSelectionChanged) cfg.onSelectionChanged(e.selectedRowsData);
             }
-        }, cfg.gridOptions || {});
+        }, filterDefaults(), cfg.gridOptions || {});
         options.columns = cfg.columns;
         // Kolom checkbox bawaan DevExtreme lebarnya 70px - dipersempit supaya kolom data muat.
         if (options.selection && options.selection.mode === "multiple") {
@@ -131,6 +139,9 @@ var HMA = (function ($) {
             return {
                 dataField: field, caption: caption || "Status", alignment: "center", width: 120,
                 calculateCellValue: function (row) { return row[field] ? onText : offText; },
+                // Filter berupa pilihan, bukan teks ("Active" juga cocok dengan "Inactive").
+                lookup: { dataSource: [onText, offText] },
+                selectedFilterOperation: "=",
                 cellTemplate: function (container, options) {
                     var on = !!options.data[field];
                     var $cell = $("<span>").addClass("sg-status");
@@ -142,7 +153,8 @@ var HMA = (function ($) {
         },
         date: function (field, caption, withTime, visible) {
             return {
-                dataField: field, caption: caption, dataType: "datetime", alignment: "right",
+                // "date" untuk kolom tanpa jam supaya filter "= tanggal" tidak gagal karena komponen jam.
+                dataField: field, caption: caption, dataType: withTime ? "datetime" : "date", alignment: "right",
                 visible: visible !== false,
                 format: withTime ? "dd-MM-yyyy HH:mm" : "dd-MM-yyyy"
             };
@@ -250,10 +262,6 @@ var HMA = (function ($) {
             $("#btn_refresh").on("click", page.search);
             $("#btn_export").on("click", function () { window.location.href = cfg.urls.exportExcel; });
             $("#btn_save").on("click", page.save);
-            $("#btn_toggleFilters").on("click", function () {
-                $("#filterBar").toggleClass("show");
-                page.grid.option("height", gridHeight("#datagrid"));
-            });
         });
 
         return page;
@@ -307,6 +315,7 @@ var HMA = (function ($) {
     return {
         post: post,
         gridHeight: gridHeight,
+        filterDefaults: filterDefaults,
         createGrid: createGrid,
         col: col,
         crudPage: crudPage,

@@ -10,13 +10,6 @@
         gGrid = HMA.createGrid("#datagrid", {
             key: "UserId",
             url: "{{ url('/User/Search') }}",
-            params: function () {
-                return {
-                    departmentId: $("#filterDepartment").val(),
-                    roleId: $("#filterRole").val(),
-                    isActive: $("#filterStatus").val()
-                };
-            },
             gridOptions: {
                 onRowDblClick: function (e) { if (gCanEdit) onEditPrepare(e.data.UserId); }
             },

@@ -9,22 +9,11 @@
                     <a class="dp-btn dp-btn-primary" href="{{ url('/Apr/Form') }}"><i class="fa fa-plus"></i> New APR</a>
                 @endif
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_open" disabled><i class="fa fa-folder-open-o"></i> Open</button>
-                <button type="button" class="dp-btn dp-btn-outline" id="btn_toggleFilters"><i class="fa fa-filter"></i> Filters</button>
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_refresh"><i class="fa fa-refresh"></i> Refresh</button>
             </div>
             <div class="dp-toolbar-right">
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_printApr" disabled><i class="fa fa-print"></i> Print APR</button>
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_printLetter" disabled><i class="fa fa-download"></i> Print Letter</button>
-            </div>
-        </div>
-        <div class="dp-filter-bar" id="filterBar">
-            <div class="sg-filter">
-                <label for="filterDateFrom">Doc Date From</label>
-                <input type="date" class="form-control" id="filterDateFrom" />
-            </div>
-            <div class="sg-filter">
-                <label for="filterDateTo">To</label>
-                <input type="date" class="form-control" id="filterDateTo" />
             </div>
         </div>
         <div class="box-body">
@@ -40,22 +29,11 @@
     $(function () {
         var formUrl = "{{ url('/Apr/Form') }}";
 
-        function params() {
-            return {
-                dateFrom: $("#filterDateFrom").val(),
-                dateTo: $("#filterDateTo").val()
-            };
-        }
-
         var grid = HMA.createGrid("#datagrid", {
             key: "AprId",
             url: "{{ url('/Apr/Search') }}",
-            params: params,
             gridOptions: {
                 selection: { mode: "single" },
-                // Status & supplier cukup lewat filter di header kolom.
-                searchPanel: { visible: false },
-                columnChooser: { enabled: false },
                 onRowDblClick: function (e) { window.location.href = formUrl + "?id=" + e.data.AprId; }
             },
             columns: [
@@ -70,7 +48,7 @@
                 { dataField: "SupplierName", caption: "Supplier" },
                 { dataField: "PartCategory", caption: "Category", visible: false },
                 {
-                    caption: "Effective", allowFiltering: false,
+                    caption: "Effective",
                     calculateCellValue: function (r) { return AprStatus.period(r.EffectiveFrom, r.EffectiveTo); }
                 },
                 { dataField: "ItemCount", caption: "Items", dataType: "number", alignment: "center", width: 70 },
@@ -81,11 +59,12 @@
                     cellTemplate: function (container, options) { AprStatus.pct(options.value).appendTo(container); }
                 },
                 {
-                    dataField: "Status", caption: "Status", width: 120, alignment: "center",
+                    dataField: "Status", caption: "Status", width: 130, alignment: "center",
+                    lookup: { dataSource: AprStatus.lookup(), valueExpr: "value", displayExpr: "text" },
                     cellTemplate: function (container, options) { AprStatus.badge(options.value).appendTo(container); }
                 },
                 {
-                    caption: "Waiting For", allowFiltering: false,
+                    caption: "Waiting For",
                     calculateCellValue: function (r) { return r.CurrentStep ? r.CurrentStep + " (" + (r.CurrentApprover || "-") + ")" : ""; }
                 },
                 { dataField: "ExtDocNo", caption: "Letter No", visible: false },
@@ -113,12 +92,7 @@
             if (row && row.Status === "ISSUED") window.open("{{ url('/Apr/PrintLetter') }}?id=" + row.AprId);
         });
 
-        $("#filterDateFrom, #filterDateTo").on("change", function () { grid.refresh(); });
         $("#btn_refresh").on("click", function () { grid.refresh(); });
-        $("#btn_toggleFilters").on("click", function () {
-            $("#filterBar").toggleClass("show");
-            grid.option("height", HMA.gridHeight("#datagrid"));
-        });
     });
 </script>
 @endsection

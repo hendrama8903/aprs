@@ -9,20 +9,9 @@
         @if ($delete)
             <button type="button" class="dp-btn dp-btn-outline-danger" id="btn_delete" disabled><i class="fa fa-trash-o"></i> Delete</button>
         @endif
-        <button type="button" class="dp-btn dp-btn-outline" id="btn_toggleFilters"><i class="fa fa-filter"></i> Filters</button>
         <button type="button" class="dp-btn dp-btn-outline" id="btn_refresh"><i class="fa fa-refresh"></i> Refresh</button>
     </div>
     <div class="dp-toolbar-right">
         <button type="button" class="dp-btn dp-btn-outline" id="btn_export"><i class="fa fa-download"></i> Export Excel</button>
-    </div>
-</div>
-<div class="dp-filter-bar" id="filterBar">
-    <div class="sg-filter">
-        <label for="filterStatus">Status</label>
-        <select class="form-control" id="filterStatus">
-            <option value="">All</option>
-            <option value="true">Active</option>
-            <option value="false">Inactive</option>
-        </select>
     </div>
 </div>

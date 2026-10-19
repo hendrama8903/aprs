@@ -112,7 +112,7 @@
         });
 
         $("#treelist").addClass("sg-grid");
-        var tree = $("#treelist").dxTreeList({
+        var tree = $("#treelist").dxTreeList($.extend({
             dataSource: store,
             keyExpr: "NodeId",
             parentIdExpr: "ParentNodeId",
@@ -127,12 +127,9 @@
             columnResizingMode: "widget",
             noDataText: "Data not found.",
             height: HMA.gridHeight("#treelist"),
-            searchPanel: { visible: true, width: 240, placeholder: "Search..." },
-            headerFilter: { visible: true },
             selection: { mode: "single" },
             sorting: { mode: "multiple" },
             scrolling: { mode: "standard" },
-            columnChooser: { enabled: true, mode: "select" },
             columnFixing: { enabled: true },
             columns: columns,
             onContentReady: function (e) {
@@ -150,7 +147,7 @@
                 $("#btnAddLabel").text("Add " + gTypeText[d.type].title);
             },
             onRowDblClick: function (e) { if (gCanEdit) onEditPrepare(e.data); }
-        }).dxTreeList("instance");
+        }, HMA.filterDefaults())).dxTreeList("instance");
 
         $(window).on("resize", function () {
             tree.option("height", HMA.gridHeight("#treelist"));

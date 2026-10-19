@@ -6,22 +6,10 @@
     <div class="dp-card">
         <div class="box-header dp-toolbar">
             <div class="dp-toolbar-left">
-                <button type="button" class="dp-btn dp-btn-outline" id="btn_toggleFilters"><i class="fa fa-filter"></i> Filters</button>
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_refresh"><i class="fa fa-refresh"></i> Refresh</button>
             </div>
             <div class="dp-toolbar-right">
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_export"><i class="fa fa-download"></i> Export Excel</button>
-            </div>
-        </div>
-        <div class="dp-filter-bar" id="filterBar">
-            <div class="sg-filter">
-                <label for="filterCategory">Category</label>
-                <select class="form-control" id="filterCategory">
-                    <option value="">All</option>
-                    @foreach ($categories as $category)
-                        <option value="{{ $category }}">{{ $category }}</option>
-                    @endforeach
-                </select>
             </div>
         </div>
         <div class="box-body">
@@ -37,14 +25,13 @@
         var grid = HMA.createGrid("#datagrid", {
             key: "ItemId",
             url: "{{ url('/Item/Search') }}",
-            params: function () { return { category: $("#filterCategory").val() }; },
             gridOptions: { selection: { mode: "single" } },
             columns: [
                 HMA.col.rowNumber(),
                 { dataField: "ItemCode", caption: "Item Code", fixed: true, fixedPosition: "left" },
                 { dataField: "ItemName", caption: "Item Name" },
                 { dataField: "Unit", caption: "Unit", width: 80, alignment: "center" },
-                { dataField: "Category", caption: "Category" },
+                { dataField: "Category", caption: "Category", lookup: { dataSource: @json($categories) } },
                 { dataField: "MinimumOrder", caption: "Min. Order", alignment: "right", visible: false },
                 { dataField: "ToolNumber", caption: "Tool Number", visible: false },
                 { dataField: "DrawingNumber", caption: "Drawing Number", visible: false },
@@ -55,14 +42,9 @@
             ].concat(HMA.col.audit())
         });
 
-        $("#filterCategory").on("change", function () { grid.refresh(); });
         $("#btn_refresh").on("click", function () { grid.refresh(); });
         $("#btn_export").on("click", function () {
-            window.location.href = "{{ url('/Item/DownloadExcel') }}?" + $.param({ category: $("#filterCategory").val() });
-        });
-        $("#btn_toggleFilters").on("click", function () {
-            $("#filterBar").toggleClass("show");
-            grid.option("height", HMA.gridHeight("#datagrid"));
+            window.location.href = "{{ url('/Item/DownloadExcel') }}";
         });
     });
 </script>
