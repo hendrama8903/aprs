@@ -23,6 +23,13 @@
 /* baris filter per kolom menyatu dengan header */
 .sg-grid .dx-datagrid-filter-row td { background: #fff; padding-top: 4px; padding-bottom: 4px; }
 .sg-grid .dx-datagrid-filter-row .dx-editor-with-menu { background: #fff; }
+/* ikon operasi filter (kaca pembesar) ada di kiri; teks dimulai setelah ikon, tidak bertumpuk.
+   !important: CSS tema menimpa padding input DevExtreme. */
+.sg-grid .dx-datagrid-filter-row .dx-editor-with-menu .dx-texteditor-input,
+.sg-grid .dx-datagrid-filter-row .dx-editor-with-menu .dx-placeholder {
+    padding-left: 30px !important;
+}
+.sg-grid .dx-datagrid-filter-row .dx-editor-with-menu .dx-placeholder::before { padding-left: 0 !important; }
 
 .sg-status { display: inline-flex; align-items: center; gap: 6px; }
 .sg-status-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: #1E9E63; }
