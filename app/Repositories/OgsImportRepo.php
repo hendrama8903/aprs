@@ -18,6 +18,7 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
  *
  * - ITEM : upsert per item_code. Item yang tidak ada di file tidak dihapus.
  * - PRICE: snapshot lengkap, tabel item_prices diganti penuh. Supplier di-upsert dari file yang sama.
+ * - PO   : upsert per (PO NO, PO LINE), jadi export beberapa periode boleh tumpang tindih.
  * Kolom dicari berdasarkan nama header (bukan posisi), jadi urutan kolom export OGS boleh berubah.
  * Temuan kualitas data dicatat sebagai warning, tidak menggagalkan import.
  */
@@ -38,6 +39,13 @@ class OgsImportRepo
         'TIME CONTROL FROM' => false, 'TIME CONTROL TO' => false,
         'INPUT BY' => false, 'INPUT DATE' => false, 'UPDATE BY' => false, 'UPDATE DATE' => false,
         'ACTIVE' => true,
+    ];
+
+    private const PoColumns = [
+        'PO NO' => true, 'PO LINE' => true, 'PO DATE' => true,
+        'ITEM CODE' => true, 'ITEM NAME' => false, 'UNIT' => false,
+        'SUPPLIER CODE' => true, 'SUPPLIER NAME' => true,
+        'CURRENCY' => true, 'QTY' => true, 'UNIT PRICE' => true,
     ];
 
     /** @var string[] */
@@ -67,7 +75,7 @@ class OgsImportRepo
     public function lastImports(): array
     {
         $result = [];
-        foreach ([OgsImport::TypeItem, OgsImport::TypePrice] as $type) {
+        foreach (array_keys(OgsImport::TypeLabels) as $type) {
             $last = OgsImport::query()->where('import_type', $type)->orderByDesc('import_id')->first();
             $result[$type] = $last === null ? null : $this->mapImport($last, false);
         }
@@ -85,7 +93,11 @@ class OgsImportRepo
             return new DBResult(false, 'The file is empty.');
         }
 
-        $columns = $importType === OgsImport::TypeItem ? self::ItemColumns : self::PriceColumns;
+        $columns = match ($importType) {
+            OgsImport::TypeItem => self::ItemColumns,
+            OgsImport::TypePrice => self::PriceColumns,
+            OgsImport::TypePo => self::PoColumns,
+        };
         $header = array_shift($rows);
         $map = $this->mapHeader($header, $columns);
         if (is_string($map)) {
@@ -106,9 +118,11 @@ class OgsImportRepo
                 'created_by' => $loginUser,
             ]);
 
-            $counts = $importType === OgsImport::TypeItem
-                ? $this->importItems($rows, $map, $import, $loginUser)
-                : $this->importPrices($rows, $map, $import, $loginUser);
+            $counts = match ($importType) {
+                OgsImport::TypeItem => $this->importItems($rows, $map, $import, $loginUser),
+                OgsImport::TypePrice => $this->importPrices($rows, $map, $import, $loginUser),
+                OgsImport::TypePo => $this->importPos($rows, $map, $import, $loginUser),
+            };
 
             $import->update($counts + [
                 'warning_count' => $this->warningCount,
@@ -117,7 +131,7 @@ class OgsImportRepo
 
             $message = sprintf(
                 '%s import finished: %d rows, %d inserted, %d updated, %d skipped, %d warning(s).',
-                $importType === OgsImport::TypeItem ? 'Item master' : 'Price master',
+                OgsImport::TypeLabels[$importType],
                 count($rows), $counts['inserted_rows'], $counts['updated_rows'], $counts['skipped_rows'], $this->warningCount,
             );
 
@@ -194,35 +208,8 @@ class OgsImportRepo
         $now = now();
         $skipped = 0;
 
-        // 1. Supplier: upsert kode + nama. Alamat/attention yang diisi di APR tidak tersentuh.
-        $supplierNames = [];
-        foreach ($rows as $r) {
-            $code = $this->text($r, $map, 'SUPPLIER CODE');
-            if ($code !== '') {
-                $supplierNames[$code][$this->text($r, $map, 'SUPPLIER NAME')] = true;
-            }
-        }
-        foreach ($supplierNames as $code => $names) {
-            if (count($names) > 1) {
-                $this->warn("Supplier {$code} has more than one name in the file: " . implode(' / ', array_keys($names)) . '. The last one is used.');
-            }
-        }
-        $supplierRecords = [];
-        foreach ($supplierNames as $code => $names) {
-            $supplierRecords[] = [
-                'supplier_code' => mb_substr((string) $code, 0, 10),
-                'supplier_name' => mb_substr((string) array_key_last($names), 0, 100),
-                'created_by' => $loginUser,
-                'created_at' => $now,
-                'updated_by' => $loginUser,
-                'updated_at' => $now,
-            ];
-        }
-        foreach (array_chunk($supplierRecords, 500) as $chunk) {
-            Supplier::query()->upsert($chunk, ['supplier_code'], ['supplier_name', 'updated_by', 'updated_at']);
-        }
-
-        $supplierIds = Supplier::query()->pluck('supplier_id', 'supplier_code')->all();
+        // 1. Supplier: upsert kode + nama.
+        $supplierIds = $this->upsertSuppliers($rows, $map, $loginUser);
         $itemIds = Item::query()->pluck('item_id', 'item_code')->all();
 
         // 2. Price: snapshot penuh menggantikan data lama.
@@ -311,6 +298,130 @@ class OgsImportRepo
             'updated_rows' => 0,
             'skipped_rows' => $skipped,
         ];
+    }
+
+    private function importPos(array $rows, array $map, OgsImport $import, string $loginUser): array
+    {
+        $now = now();
+        $skipped = 0;
+
+        $supplierIds = $this->upsertSuppliers($rows, $map, $loginUser);
+        $itemIds = Item::query()->pluck('item_id', 'item_code')->all();
+
+        $records = [];
+        $missingItems = [];
+        foreach ($rows as $index => $r) {
+            $line = $index + 2;
+            $poNo = $this->text($r, $map, 'PO NO');
+            $poLine = $r[$map['PO LINE']] ?? null;
+            $itemCode = $this->text($r, $map, 'ITEM CODE');
+            $supplierCode = $this->text($r, $map, 'SUPPLIER CODE');
+            $qty = $r[$map['QTY']] ?? null;
+            $unitPrice = $r[$map['UNIT PRICE']] ?? null;
+            $poDate = $this->date($r, $map, 'PO DATE', $line);
+
+            $error = match (true) {
+                $poNo === '' || !is_numeric($poLine) => 'PO number / line is empty',
+                $poDate === null => 'PO date is empty or invalid',
+                $supplierCode === '' || !isset($supplierIds[$supplierCode]) => 'supplier code is empty',
+                !is_numeric($qty) || (float) $qty <= 0 => "invalid qty '{$qty}'",
+                !is_numeric($unitPrice) || (float) $unitPrice < 0 => "invalid unit price '{$unitPrice}'",
+                default => null,
+            };
+            if ($error !== null) {
+                $this->warn("Row {$line}: PO {$poNo} item {$itemCode}: {$error}, skipped.");
+                $skipped++;
+                continue;
+            }
+
+            if (!isset($itemIds[$itemCode])) {
+                $missingItems[$itemCode] = true;
+            }
+
+            $key = $poNo . '|' . (int) $poLine;
+            if (isset($records[$key])) {
+                $this->warn("Row {$line}: PO {$poNo} line {$poLine} appears more than once, last row is used.");
+            }
+            $records[$key] = [
+                'po_no' => mb_substr($poNo, 0, 30),
+                'po_line' => (int) $poLine,
+                'po_date' => $poDate->toDateString(),
+                'item_code' => mb_substr($itemCode, 0, 20),
+                'item_id' => $itemIds[$itemCode] ?? null,
+                'supplier_id' => $supplierIds[$supplierCode],
+                'currency' => mb_strtoupper(mb_substr($this->text($r, $map, 'CURRENCY'), 0, 3)),
+                'qty' => (float) $qty,
+                'unit_price' => (float) $unitPrice,
+                'amount' => round((float) $qty * (float) $unitPrice, 4),
+                'import_id' => $import->import_id,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        if ($missingItems !== []) {
+            $codes = array_keys($missingItems);
+            $this->warn(count($codes) . ' item code(s) in PO data are not in item master: ' . implode(', ', array_slice($codes, 0, 50)) . (count($codes) > 50 ? ', ...' : ''));
+        }
+
+        // Hitung yang sudah ada sebelum upsert untuk membedakan inserted vs updated.
+        $existing = [];
+        foreach (array_chunk(array_unique(array_column($records, 'po_no')), 1000) as $poNos) {
+            foreach (DB::table('po_transactions')->whereIn('po_no', $poNos)->get(['po_no', 'po_line']) as $e) {
+                $existing[$e->po_no . '|' . $e->po_line] = true;
+            }
+        }
+        $updated = count(array_intersect_key($records, $existing));
+
+        foreach (array_chunk(array_values($records), 500) as $chunk) {
+            DB::table('po_transactions')->upsert($chunk, ['po_no', 'po_line'], [
+                'po_date', 'item_code', 'item_id', 'supplier_id', 'currency', 'qty', 'unit_price', 'amount', 'import_id', 'updated_at',
+            ]);
+        }
+
+        return [
+            'inserted_rows' => count($records) - $updated,
+            'updated_rows' => $updated,
+            'skipped_rows' => $skipped,
+        ];
+    }
+
+    /**
+     * Upsert supplier (kode + nama) dari file price master / PO.
+     * Alamat, attention dan status yang diisi di APR tidak tersentuh.
+     *
+     * @return array<string,int> supplier_code -> supplier_id
+     */
+    private function upsertSuppliers(array $rows, array $map, string $loginUser): array
+    {
+        $now = now();
+        $supplierNames = [];
+        foreach ($rows as $r) {
+            $code = $this->text($r, $map, 'SUPPLIER CODE');
+            if ($code !== '') {
+                $supplierNames[$code][$this->text($r, $map, 'SUPPLIER NAME')] = true;
+            }
+        }
+
+        $records = [];
+        foreach ($supplierNames as $code => $names) {
+            if (count($names) > 1) {
+                $this->warn("Supplier {$code} has more than one name in the file: " . implode(' / ', array_keys($names)) . '. The last one is used.');
+            }
+            $records[] = [
+                'supplier_code' => mb_substr((string) $code, 0, 10),
+                'supplier_name' => mb_substr((string) array_key_last($names), 0, 100),
+                'created_by' => $loginUser,
+                'created_at' => $now,
+                'updated_by' => $loginUser,
+                'updated_at' => $now,
+            ];
+        }
+        foreach (array_chunk($records, 500) as $chunk) {
+            Supplier::query()->upsert($chunk, ['supplier_code'], ['supplier_name', 'updated_by', 'updated_at']);
+        }
+
+        return Supplier::query()->pluck('supplier_id', 'supplier_code')->all();
     }
 
     // ---------- Helper baca sheet ----------

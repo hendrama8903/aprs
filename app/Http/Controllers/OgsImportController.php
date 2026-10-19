@@ -46,7 +46,7 @@ class OgsImportController extends Controller
             }
 
             $type = (string) $request->input('importType');
-            if (!in_array($type, [OgsImport::TypeItem, OgsImport::TypePrice], true)) {
+            if (!array_key_exists($type, OgsImport::TypeLabels)) {
                 return new DBResult(false, 'Please choose the import type.');
             }
 

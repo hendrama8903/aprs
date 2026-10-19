@@ -8,6 +8,13 @@ class OgsImport extends Model
 {
     public const TypeItem = 'ITEM';
     public const TypePrice = 'PRICE';
+    public const TypePo = 'PO';
+
+    public const TypeLabels = [
+        self::TypeItem => 'Item master',
+        self::TypePrice => 'Price master',
+        self::TypePo => 'PO transaction',
+    ];
 
     public const UPDATED_AT = null;
 

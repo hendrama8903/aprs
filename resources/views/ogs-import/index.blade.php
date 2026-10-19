@@ -11,7 +11,7 @@
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_refresh"><i class="fa fa-refresh"></i> Refresh</button>
             </div>
             <div class="dp-toolbar-right">
-                @foreach (['ITEM' => 'Item master', 'PRICE' => 'Price master'] as $type => $label)
+                @foreach (\App\Models\OgsImport::TypeLabels as $type => $label)
                     @php($last = $lastImports[$type])
                     <span class="ogs-last" title="Last {{ strtolower($label) }} import">
                         <i class="fa fa-clock-o"></i> {{ $label }}:
@@ -54,6 +54,7 @@
                         <select class="form-control" id="uploadType">
                             <option value="ITEM">Item Master</option>
                             <option value="PRICE">Price Master</option>
+                            <option value="PO">PO Transaction</option>
                         </select>
                         <div class="dpf-hint" id="uploadTypeHint"></div>
                     </div>
@@ -103,7 +104,7 @@
 
 @section('scripts')
 <style>
-    .ogs-last { display: inline-block; margin-left: 16px; font-size: 12px; color: #6b7280; }
+    .ogs-last { display: inline-block; margin-left: 14px; font-size: 12px; color: #6b7280; }
     .ogs-warnings { max-height: 420px; overflow-y: auto; padding-left: 18px; margin: 0; }
     .ogs-warnings li { margin-bottom: 6px; word-break: break-word; }
 </style>
@@ -111,13 +112,15 @@
     var gGrid;
     var gTypeHints = {
         ITEM: "Items are inserted or updated by item code. Items missing from the file are kept.",
-        PRICE: "Replaces ALL price data with this file. Suppliers are created or renamed automatically."
+        PRICE: "Replaces ALL price data with this file. Suppliers are created or renamed automatically.",
+        PO: "PO lines are inserted or updated by PO No + PO Line, so overlapping periods are safe. Columns: PO NO, PO LINE, PO DATE, ITEM CODE, SUPPLIER CODE, SUPPLIER NAME, CURRENCY, QTY, UNIT PRICE."
     };
+    var gTypeNames = { ITEM: "Item Master", PRICE: "Price Master", PO: "PO Transaction" };
 
     function showDetail(importId) {
         HMA.post("{{ url('/OgsImport/GetByKey') }}", { importId: importId }, function (result) {
             var d = result.data;
-            $("#detailTitle").text((d.ImportType === "ITEM" ? "Item Master" : "Price Master") + " Import #" + d.ImportId);
+            $("#detailTitle").text(gTypeNames[d.ImportType] + " Import #" + d.ImportId);
             $("#detailSub").text(d.FileName + " - " + d.TotalRows + " rows, " + d.WarningCount + " warning(s)");
             var $list = $("#detailWarnings").empty();
             if (!d.Warnings.length) {

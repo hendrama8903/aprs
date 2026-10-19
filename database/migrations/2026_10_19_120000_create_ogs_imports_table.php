@@ -11,7 +11,7 @@ return new class extends Migration
         // Log setiap upload file export OGS (data hanya mengalir OGS -> APR).
         Schema::create('ogs_imports', function (Blueprint $table) {
             $table->id('import_id');
-            $table->enum('import_type', ['ITEM', 'PRICE']);
+            $table->enum('import_type', ['ITEM', 'PRICE', 'PO']);
             $table->string('file_name', 200);
             $table->integer('total_rows')->default(0);
             $table->integer('inserted_rows')->default(0);
