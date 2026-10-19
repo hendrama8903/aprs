@@ -57,6 +57,7 @@
                             <option value="PO">PO Transaction</option>
                         </select>
                         <div class="dpf-hint" id="uploadTypeHint"></div>
+                        <a href="#" class="ogs-template" id="btn_template"><i class="fa fa-download"></i> <span id="templateLabel">Download template</span></a>
                     </div>
                 </div>
                 <div class="dpf-row">
@@ -105,6 +106,7 @@
 @section('scripts')
 <style>
     .ogs-last { display: inline-block; margin-left: 14px; font-size: 12px; color: #6b7280; }
+    .ogs-template { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 600; }
     .ogs-warnings { max-height: 420px; overflow-y: auto; padding-left: 18px; margin: 0; }
     .ogs-warnings li { margin-bottom: 6px; word-break: break-word; }
 </style>
@@ -164,8 +166,15 @@
         $("#btn_refresh").on("click", function () { gGrid.refresh(); });
 
         $("#uploadType").on("change", function () {
-            $("#uploadTypeHint").text(gTypeHints[$(this).val()]);
+            var type = $(this).val();
+            $("#uploadTypeHint").text(gTypeHints[type]);
+            $("#templateLabel").text("Download " + gTypeNames[type] + " template");
         }).trigger("change");
+
+        $("#btn_template").on("click", function (e) {
+            e.preventDefault();
+            window.location.href = "{{ url('/OgsImport/DownloadTemplate') }}?importType=" + $("#uploadType").val();
+        });
 
         $("#btn_upload").on("click", function () {
             $("#uploadFile").val("");

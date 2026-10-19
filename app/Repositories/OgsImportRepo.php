@@ -9,7 +9,10 @@ use App\Models\Supplier;
 use App\Support\DBResult;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 /**
@@ -81,6 +84,70 @@ class OgsImportRepo
         }
 
         return $result;
+    }
+
+    /**
+     * Template upload: header kolom yang dibaca import (kolom wajib berwarna) + satu baris contoh.
+     * Dibangun dari konstanta kolom yang sama dengan import, jadi selalu sinkron.
+     */
+    public function template(string $importType): Spreadsheet
+    {
+        [$columns, $example] = match ($importType) {
+            OgsImport::TypeItem => [self::ItemColumns, [
+                'ITEM CODE' => '10030010', 'ITEM NAME' => 'ABRASIVE PAPER 9" X 11" #80', 'UNIT' => 'LBR', 'CATEGORY' => 'CONSUMABLE',
+                'MINUMUM ORDER' => '1', 'TC FROM' => '2012-01-01', 'TC TO' => '2089-12-31',
+            ]],
+            OgsImport::TypePrice => [self::PriceColumns, [
+                'ITEM CODE' => '10030010', 'ITEM NAME' => 'ABRASIVE PAPER 9" X 11" #80', 'UNIT' => 'LBR',
+                'SUPPLIER PLANT CODE' => '01', 'SUPPLIER CODE' => '1003', 'SUPPLIER NAME' => 'EXAMPLE SUPPLIER PT.',
+                'CURRENCY' => 'IDR', 'PRICE' => 2060, 'QUOTATION' => 'PC OCT-MAR26',
+                'TIME CONTROL FROM' => '2025-10-01', 'TIME CONTROL TO' => '2026-03-31', 'ACTIVE' => 'TRUE',
+            ]],
+            OgsImport::TypePo => [self::PoColumns, [
+                'PO NO' => 'PO25-00001', 'PO LINE' => 1, 'PO DATE' => '2025-07-15', 'ITEM CODE' => '10030010',
+                'ITEM NAME' => 'ABRASIVE PAPER 9" X 11" #80', 'UNIT' => 'LBR', 'SUPPLIER CODE' => '1003',
+                'SUPPLIER NAME' => 'EXAMPLE SUPPLIER PT.', 'CURRENCY' => 'IDR', 'QTY' => 200, 'UNIT PRICE' => 2040,
+            ]],
+        };
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle(OgsImport::TypeLabels[$importType]);
+
+        $col = 1;
+        foreach ($columns as $name => $required) {
+            $sheet->getCell([$col, 1])->setValue($name);
+            $style = $sheet->getStyle([$col, 1]);
+            $style->getFont()->setBold(true);
+            if ($required) {
+                $style->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FDE68A');
+            }
+            // Kode ditulis sebagai teks supaya leading zero (mis. supplier 0147) tidak hilang.
+            $value = $example[$name] ?? null;
+            if ($value !== null) {
+                is_string($value)
+                    ? $sheet->getCell([$col, 2])->setValueExplicit($value, DataType::TYPE_STRING)
+                    : $sheet->getCell([$col, 2])->setValue($value);
+            }
+            $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+            $col++;
+        }
+
+        // Petunjuk di sheet terpisah: import hanya membaca sheet aktif (sheet pertama), jadi catatan tidak terbaca sebagai data.
+        $info = $spreadsheet->createSheet();
+        $info->setTitle('Info');
+        $info->fromArray([
+            ['How to use this template'],
+            ['- Fill the data in the first sheet. Row 1 is the header and must not be changed.'],
+            ['- Yellow header = required column. Row 2 is an example, replace or delete it.'],
+            ['- Column order is free; columns are matched by header name.'],
+            ['- Dates: YYYY-MM-DD or an Excel date. Keep codes (item, supplier) as text so leading zeros are kept.'],
+        ]);
+        $info->getStyle('A1')->getFont()->setBold(true);
+        $info->getColumnDimension('A')->setAutoSize(true);
+        $spreadsheet->setActiveSheetIndex(0);
+
+        return $spreadsheet;
     }
 
     public function import(string $importType, string $filePath, string $fileName, string $loginUser): DBResult

@@ -7,6 +7,7 @@ use App\Repositories\OgsImportRepo;
 use App\Support\DBResult;
 use App\Support\PermissionCodes;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
  * Upload file export OGS (item master / price master) dan riwayat import-nya.
@@ -36,6 +37,21 @@ class OgsImportController extends Controller
             fn () => $this->ogsImportRepo->getByKey((int) $request->input('importId')),
             'Import log not found.',
         );
+    }
+
+    public function downloadTemplate(Request $request)
+    {
+        $type = (string) $request->query('importType');
+        if (!array_key_exists($type, OgsImport::TypeLabels)) {
+            abort(404);
+        }
+
+        $writer = new Xlsx($this->ogsImportRepo->template($type));
+        $fileName = 'Template_' . str_replace(' ', '_', OgsImport::TypeLabels[$type]) . '.xlsx';
+
+        return response()->streamDownload(fn () => $writer->save('php://output'), $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     public function upload(Request $request)

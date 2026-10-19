@@ -55,6 +55,7 @@ Route::middleware('menu.access:/OgsImport/Index')->group(function () {
     Route::post('/OgsImport/Search', [OgsImportController::class, 'search']);
     Route::post('/OgsImport/GetByKey', [OgsImportController::class, 'getByKey']);
     Route::post('/OgsImport/Upload', [OgsImportController::class, 'upload']);
+    Route::get('/OgsImport/DownloadTemplate', [OgsImportController::class, 'downloadTemplate']);
 });
 
 Route::middleware('menu.access:/Item/Index')->group(function () {
