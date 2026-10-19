@@ -3,8 +3,11 @@
    ===================================================================== */
 
 /* ---------- Grid ---------- */
+/* Judul kolom satu baris: kalau dibungkus, header kolom fixed (kiri) dan header lain beda tinggi
+   sehingga muncul celah di bawah header. Lebar kolom ikut judul (columnAutoWidth). */
+.sg-grid .dx-datagrid-headers .dx-header-row td { white-space: nowrap; }
 .sg-grid .dx-datagrid-headers .dx-header-row td .dx-datagrid-text-content {
-    white-space: normal;
+    white-space: nowrap;
     overflow: visible;
     text-overflow: unset;
     line-height: 1.3;

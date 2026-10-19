@@ -52,6 +52,19 @@ var HMA = (function ($) {
     // Tambahkan tombol "More Filters" ke toolbar kiri kartu tempat grid berada (sebelum tombol Refresh).
     // Klik = tampil/sembunyikan baris filter per kolom; saat disembunyikan, isinya dikosongkan
     // supaya tidak ada filter tersembunyi yang masih aktif.
+    // "width" kolom diperlakukan sebagai lebar minimum: kolom boleh melebar supaya judul + ikon sort/filter
+    // muat dalam satu baris. Kalau judul terbungkus, header kolom fixed dan non-fixed beda tinggi (ada celah).
+    function relaxWidth(column) {
+        if (column && column.width && !column.minWidth && column.type !== "selection") {
+            column = $.extend({}, column, { minWidth: column.width });
+            delete column.width;
+        }
+        if (column && column.columns) {
+            column = $.extend({}, column, { columns: $.map(column.columns, relaxWidth) });
+        }
+        return column;
+    }
+
     // Satu halaman = satu tombol; beberapa grid di halaman yang sama (mis. tab) ikut tombol yang sama.
     function attachFilterToggle(grid, selector) {
         var $toolbar = $(selector).closest(".dp-card").find(".dp-toolbar-left").first();
@@ -133,7 +146,7 @@ var HMA = (function ($) {
                 if (cfg.onSelectionChanged) cfg.onSelectionChanged(e.selectedRowsData);
             }
         }, filterDefaults(), cfg.gridOptions || {});
-        options.columns = cfg.columns;
+        options.columns = $.map(cfg.columns, relaxWidth);
         // Kolom checkbox bawaan DevExtreme lebarnya 70px - dipersempit supaya kolom data muat.
         if (options.selection && options.selection.mode === "multiple") {
             options.columns = [{ type: "selection", width: 40 }].concat(options.columns);
@@ -347,6 +360,7 @@ var HMA = (function ($) {
         post: post,
         gridHeight: gridHeight,
         filterDefaults: filterDefaults,
+        relaxWidth: relaxWidth,
         attachFilterToggle: attachFilterToggle,
         createGrid: createGrid,
         col: col,
