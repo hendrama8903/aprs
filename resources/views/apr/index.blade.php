@@ -19,21 +19,6 @@
         </div>
         <div class="dp-filter-bar" id="filterBar">
             <div class="sg-filter">
-                <label for="filterStatus">Status</label>
-                <select class="form-control" id="filterStatus">
-                    <option value="">All</option>
-                    <option value="DRAFT">Draft</option>
-                    <option value="IN_APPROVAL">In Approval</option>
-                    <option value="REJECTED">Rejected</option>
-                    <option value="APPROVED">Approved</option>
-                    <option value="ISSUED">Issued</option>
-                </select>
-            </div>
-            <div class="sg-filter" style="min-width: 300px;">
-                <label for="filterSupplier">Supplier</label>
-                <select class="form-control" id="filterSupplier"></select>
-            </div>
-            <div class="sg-filter">
                 <label for="filterDateFrom">Doc Date From</label>
                 <input type="date" class="form-control" id="filterDateFrom" />
             </div>
@@ -57,14 +42,10 @@
 
         function params() {
             return {
-                status: $("#filterStatus").val(),
-                supplierId: $("#filterSupplier").val() || "",
                 dateFrom: $("#filterDateFrom").val(),
                 dateTo: $("#filterDateTo").val()
             };
         }
-
-        HMA.select2("#filterSupplier", "{{ url('/Lookup/Supplier') }}", "All suppliers");
 
         var grid = HMA.createGrid("#datagrid", {
             key: "AprId",
@@ -72,6 +53,9 @@
             params: params,
             gridOptions: {
                 selection: { mode: "single" },
+                // Status & supplier cukup lewat filter di header kolom.
+                searchPanel: { visible: false },
+                columnChooser: { enabled: false },
                 onRowDblClick: function (e) { window.location.href = formUrl + "?id=" + e.data.AprId; }
             },
             columns: [
@@ -129,7 +113,7 @@
             if (row && row.Status === "ISSUED") window.open("{{ url('/Apr/PrintLetter') }}?id=" + row.AprId);
         });
 
-        $("#filterStatus, #filterSupplier, #filterDateFrom, #filterDateTo").on("change", function () { grid.refresh(); });
+        $("#filterDateFrom, #filterDateTo").on("change", function () { grid.refresh(); });
         $("#btn_refresh").on("click", function () { grid.refresh(); });
         $("#btn_toggleFilters").on("click", function () {
             $("#filterBar").toggleClass("show");
