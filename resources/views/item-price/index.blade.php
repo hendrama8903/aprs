@@ -51,8 +51,8 @@
                 HMA.col.date("OgsInputDate", "OGS Input Date", true, false),
                 { dataField: "OgsUpdateBy", caption: "OGS Update By", visible: false },
                 HMA.col.date("OgsUpdateDate", "OGS Update Date", true, false),
-                // Awalnya hanya harga aktif; filter bisa diganti/di-reset di baris filter.
-                $.extend(HMA.col.status("IsActive", "Active", "Active", "Inactive"), { filterValue: "Active" })
+                // Awalnya hanya harga aktif; bisa diganti lewat ikon filter di header kolom.
+                $.extend(HMA.col.status("IsActive", "Active", "Active", "Inactive"), { filterValues: ["Active"] })
             ]
         });
 

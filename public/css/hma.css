@@ -17,6 +17,9 @@
 }
 .sg-grid .dx-datagrid-pager .dx-page-sizes .dx-selectbox { margin-right: 4px; }
 
+/* tombol "More Filters" saat baris filter sedang tampil */
+.sg-filter-toggle.active { background: #E7F1FB; border-color: #2450D8; color: #2450D8; }
+
 /* baris filter per kolom menyatu dengan header */
 .sg-grid .dx-datagrid-filter-row td { background: #fff; padding-top: 4px; padding-bottom: 4px; }
 .sg-grid .dx-datagrid-filter-row .dx-editor-with-menu { background: #fff; }

@@ -36,15 +36,45 @@ var HMA = (function ($) {
         return Math.max(minHeight || 300, $(window).height() - $grid.offset().top - 40);
     }
 
-    // Standar filter semua grid/treelist: baris filter di bawah header setiap kolom.
-    // Tidak ada search panel, column chooser, maupun bar filter terpisah di atas grid.
+    // Standar filter semua grid/treelist:
+    // - ikon corong di header setiap kolom (pilih/cari nilai kolom tsb),
+    // - baris filter per kolom yang dimunculkan lewat tombol "More Filters" di toolbar (lihat attachFilterToggle).
+    // Tidak ada search panel maupun column chooser.
     function filterDefaults() {
         return {
-            filterRow: { visible: true, applyFilter: "auto", showOperationChooser: true, resetOperationText: "Reset" },
-            headerFilter: { visible: false },
+            filterRow: { visible: false, applyFilter: "auto", showOperationChooser: true, resetOperationText: "Reset" },
+            headerFilter: { visible: true, allowSearch: true },
             searchPanel: { visible: false },
             columnChooser: { enabled: false }
         };
+    }
+
+    // Tambahkan tombol "More Filters" ke toolbar kiri kartu tempat grid berada (sebelum tombol Refresh).
+    // Klik = tampil/sembunyikan baris filter per kolom; saat disembunyikan, isinya dikosongkan
+    // supaya tidak ada filter tersembunyi yang masih aktif.
+    // Satu halaman = satu tombol; beberapa grid di halaman yang sama (mis. tab) ikut tombol yang sama.
+    function attachFilterToggle(grid, selector) {
+        var $toolbar = $(selector).closest(".dp-card").find(".dp-toolbar-left").first();
+        if ($toolbar.length === 0) $toolbar = $(".dp-toolbar-left").first();
+        if ($toolbar.length === 0) return;
+
+        var $btn = $toolbar.find(".sg-filter-toggle");
+        if ($btn.length === 0) {
+            $btn = $('<button type="button" class="dp-btn dp-btn-outline sg-filter-toggle"><i class="fa fa-filter"></i> More Filters</button>');
+            var $refresh = $toolbar.find("#btn_refresh");
+            if ($refresh.length) $btn.insertBefore($refresh); else $btn.appendTo($toolbar);
+            $btn.data("grids", []);
+            $btn.on("click", function () {
+                var show = !$btn.hasClass("active");
+                $btn.toggleClass("active", show);
+                $.each($btn.data("grids"), function (_, g) {
+                    if (!show) g.clearFilter("row");
+                    g.option("filterRow.visible", show);
+                });
+            });
+        }
+        $btn.data("grids").push(grid);
+        grid.option("filterRow.visible", $btn.hasClass("active"));
     }
 
     // Grid standar: data diambil sekali dari url (POST), filter/paging di client.
@@ -111,6 +141,7 @@ var HMA = (function ($) {
 
         $(selector).addClass("sg-grid");
         var grid = $(selector).dxDataGrid(options).dxDataGrid("instance");
+        if (cfg.filterToggle !== false) attachFilterToggle(grid, selector);
 
         $(window).on("resize", function () {
             grid.option("height", gridHeight(selector));
@@ -316,6 +347,7 @@ var HMA = (function ($) {
         post: post,
         gridHeight: gridHeight,
         filterDefaults: filterDefaults,
+        attachFilterToggle: attachFilterToggle,
         createGrid: createGrid,
         col: col,
         crudPage: crudPage,

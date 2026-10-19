@@ -148,6 +148,7 @@
             },
             onRowDblClick: function (e) { if (gCanEdit) onEditPrepare(e.data); }
         }, HMA.filterDefaults())).dxTreeList("instance");
+        HMA.attachFilterToggle(tree, "#treelist");
 
         $(window).on("resize", function () {
             tree.option("height", HMA.gridHeight("#treelist"));
