@@ -126,6 +126,8 @@ var HMA = (function ($) {
         var options = $.extend(true, {
             dataSource: store,
             showBorders: true,
+            showRowLines: true,
+            showColumnLines: true,
             columnAutoWidth: true,
             allowColumnResizing: true,
             columnResizingMode: "widget",

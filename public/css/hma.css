@@ -3,6 +3,24 @@
    ===================================================================== */
 
 /* ---------- Grid ---------- */
+/* Tampilan standar semua grid (.sg-grid), termasuk grid selain #datagrid (popup, form, tab, treelist):
+   border luar, garis antar-baris & antar-kolom, header abu-abu kapital seperti grid utama. */
+.sg-grid .dx-datagrid-headers {
+    background: #F9FAFB;
+    color: #667085;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    font-weight: 700;
+}
+.sg-grid .dx-datagrid-headers .dx-datagrid-text-content { font-weight: 700; color: #344054; }
+.sg-grid .dx-datagrid-borders > .dx-datagrid-headers,
+.sg-grid .dx-datagrid-borders > .dx-datagrid-rowsview,
+.sg-grid .dx-datagrid-borders > .dx-datagrid-total-footer { border-color: #E3E8EF; }
+.sg-grid .dx-datagrid-headers td,
+.sg-grid .dx-datagrid-rowsview td { border-color: #EAECF0 !important; }
+.sg-grid .dx-datagrid-rowsview .dx-data-row > td { border-bottom: 1px solid #EAECF0; }
+
 /* Judul kolom satu baris: kalau dibungkus, header kolom fixed (kiri) dan header lain beda tinggi
    sehingga muncul celah di bawah header. Lebar kolom ikut judul (columnAutoWidth). */
 .sg-grid .dx-datagrid-headers .dx-header-row td { white-space: nowrap; }

@@ -321,6 +321,8 @@
                 dataSource: lines,
                 keyExpr: "ItemCode",
                 showBorders: true,
+                showRowLines: true,
+                showColumnLines: true,
                 columnAutoWidth: true,
                 allowColumnResizing: true,
                 noDataText: "No items yet. Choose the supplier and purchase period, then click Add Items.",
@@ -385,6 +387,8 @@
                 dataSource: [],
                 keyExpr: "ItemCode",
                 showBorders: true,
+                showRowLines: true,
+                showColumnLines: true,
                 columnAutoWidth: true,
                 height: 460,
                 selection: { mode: "multiple", showCheckBoxesMode: "always", allowSelectAll: true },
@@ -561,7 +565,11 @@
                 candidateGrid.option("dataSource", data);
                 candidateGrid.clearSelection();
                 $("#modalItems").modal("show");
-                setTimeout(function () { candidateGrid.updateDimensions(); }, 300);
+                // Tinggi grid mengikuti layar supaya popup tidak punya scrollbar kedua.
+                setTimeout(function () {
+                    candidateGrid.option("height", Math.max(240, Math.min(460, $(window).height() - 300)));
+                    candidateGrid.updateDimensions();
+                }, 300);
             }, { successMessage: false });
         }
 
