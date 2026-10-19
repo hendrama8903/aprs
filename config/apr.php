@@ -13,6 +13,9 @@ return [
         'department' => env('APR_COMPANY_DEPARTMENT', 'PUD'),
     ],
 
+    // Pemilik aplikasi di footer halaman login: "© {tahun} {login_footer}. All rights reserved."
+    'login_footer' => env('APR_LOGIN_FOOTER', 'General Affairs Department'),
+
     // Kenaikan harga (%) di atas nilai ini wajib diberi remark.
     'remark_threshold_pct' => (float) env('APR_REMARK_THRESHOLD_PCT', 5),
 

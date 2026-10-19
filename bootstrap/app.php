@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\KeepSignedIn;
 use App\Http\Middleware\MenuAccess;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'menu.access' => MenuAccess::class,
         ]);
+        // Sebelum StartSession supaya umur session "Keep me signed in" ikut dipakai.
+        $middleware->web(prepend: [KeepSignedIn::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

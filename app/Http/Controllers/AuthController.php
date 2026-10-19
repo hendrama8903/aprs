@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\KeepSignedIn;
 use App\Repositories\AuthRepo;
 use App\Support\PasswordHasher;
 use App\Support\SessionAuth;
 use App\Support\SessionKeys;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Log;
 
 /** Port dari Controllers/AuthController.cs. */
@@ -65,6 +67,14 @@ class AuthController extends Controller
             $returnUrl = (string) $request->input('returnUrl', '');
             $redirectUrl = $returnUrl !== '' && str_starts_with($returnUrl, '/') ? $returnUrl : '/';
 
+            // "Keep me signed in": session bertahan KEEP_MINUTES (lihat KeepSignedIn), selain itu SESSION_LIFETIME.
+            if ($request->boolean('keepSignedIn')) {
+                config(['session.lifetime' => KeepSignedIn::KEEP_MINUTES]);
+                Cookie::queue(KeepSignedIn::KEEP_COOKIE, '1', KeepSignedIn::KEEP_MINUTES);
+            } else {
+                Cookie::queue(Cookie::forget(KeepSignedIn::KEEP_COOKIE));
+            }
+
             return response()->json(['status' => true, 'message' => 'Login successful!', 'data' => $redirectUrl]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
@@ -99,6 +109,7 @@ class AuthController extends Controller
     public function logout()
     {
         session()->flush();
+        Cookie::queue(Cookie::forget(KeepSignedIn::KEEP_COOKIE));
 
         return redirect()->route('auth.login');
     }
