@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\ApprovalController;
+use App\Http\Controllers\ApprovalSettingController;
+use App\Http\Controllers\AprController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\HomeController;
@@ -72,6 +75,41 @@ Route::middleware('menu.access:/ItemPrice/Index')->group(function () {
     Route::get('/ItemPrice/Index', [ItemPriceController::class, 'index']);
     Route::post('/ItemPrice/Search', [ItemPriceController::class, 'search']);
     Route::get('/ItemPrice/DownloadExcel', [ItemPriceController::class, 'downloadExcel']);
+});
+
+// ---------- Price Confirmation ----------
+
+Route::middleware('menu.access:/Apr/Index')->group(function () {
+    Route::get('/Apr/Index', [AprController::class, 'index']);
+    Route::post('/Apr/Search', [AprController::class, 'search']);
+    Route::post('/Apr/CandidateItems', [AprController::class, 'candidateItems']);
+    Route::post('/Apr/Save', [AprController::class, 'save']);
+    Route::post('/Apr/Delete', [AprController::class, 'delete']);
+    Route::post('/Apr/Submit', [AprController::class, 'submit']);
+    Route::post('/Apr/Issue', [AprController::class, 'issue']);
+});
+
+// Dibuka dari APR List maupun Approval Inbox; akses menu dicek di AprController::canView().
+Route::middleware('menu.access')->group(function () {
+    Route::get('/Apr/Form', [AprController::class, 'form']);
+    Route::post('/Apr/GetByKey', [AprController::class, 'getByKey']);
+    Route::get('/Apr/PrintApr', [AprController::class, 'printApr']);
+    Route::get('/Apr/PrintLetter', [AprController::class, 'printLetter']);
+});
+
+Route::middleware('menu.access:/Approval/Index')->group(function () {
+    Route::get('/Approval/Index', [ApprovalController::class, 'index']);
+    Route::post('/Approval/Search', [ApprovalController::class, 'search']);
+    Route::post('/Approval/History', [ApprovalController::class, 'history']);
+    Route::post('/Approval/Approve', [AprController::class, 'approve']);
+    Route::post('/Approval/Reject', [AprController::class, 'reject']);
+});
+
+Route::middleware('menu.access:/ApprovalSetting/Index')->group(function () {
+    Route::get('/ApprovalSetting/Index', [ApprovalSettingController::class, 'index']);
+    Route::post('/ApprovalSetting/Search', [ApprovalSettingController::class, 'search']);
+    Route::post('/ApprovalSetting/GetByKey', [ApprovalSettingController::class, 'getByKey']);
+    Route::post('/ApprovalSetting/AddEdit', [ApprovalSettingController::class, 'addEdit']);
 });
 
 // ---------- Administration ----------

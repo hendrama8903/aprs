@@ -50,7 +50,8 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $view->with('title', $menu->MenuName ?? $view->getData()['title'] ?? '');
-            $view->with('parentTitle', $parentTitle);
+            // Halaman yang bukan menu (mis. form detail) boleh mengirim title/parentTitle sendiri.
+            $view->with('parentTitle', $parentTitle ?? $view->getData()['parentTitle'] ?? null);
         });
     }
 }

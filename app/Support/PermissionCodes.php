@@ -18,6 +18,13 @@ final class PermissionCodes
     public const OgsImportUpload = 'OGSIMPORT-UPLOAD';
     public const SupplierEdit = 'SUPPLIER-EDIT';
 
+    // ---------- Price Confirmation ----------
+    public const AprAdd = 'APR-ADD';
+    public const AprEdit = 'APR-EDIT';
+    public const AprDelete = 'APR-DELETE';
+    public const AprIssue = 'APR-ISSUE';
+    public const ApprovalSettingEdit = 'APPROVALSETTING-EDIT';
+
     // ---------- Administration ----------
     public const UserAdd = 'USER-ADD';
     public const UserEdit = 'USER-EDIT';
