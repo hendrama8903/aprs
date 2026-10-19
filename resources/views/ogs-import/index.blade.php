@@ -56,7 +56,6 @@
                             <option value="PRICE">Price Master</option>
                             <option value="PO">PO Transaction</option>
                         </select>
-                        <div class="dpf-hint" id="uploadTypeHint"></div>
                         <a href="#" class="ogs-template" id="btn_template"><i class="fa fa-download"></i> <span id="templateLabel">Download template</span></a>
                     </div>
                 </div>
@@ -112,11 +111,6 @@
 </style>
 <script type="text/javascript">
     var gGrid;
-    var gTypeHints = {
-        ITEM: "",
-        PRICE: "Replaces ALL price data with this file. Suppliers are created or renamed automatically.",
-        PO: ""
-    };
     var gTypeNames = { ITEM: "Item Master", PRICE: "Price Master", PO: "PO Transaction" };
 
     function showDetail(importId) {
@@ -167,7 +161,6 @@
 
         $("#uploadType").on("change", function () {
             var type = $(this).val();
-            $("#uploadTypeHint").text(gTypeHints[type]);
             $("#templateLabel").text("Download " + gTypeNames[type] + " template");
         }).trigger("change");
 
@@ -189,7 +182,7 @@
             }
             var type = $("#uploadType").val();
             var label = $("#uploadType option:selected").text();
-            showConfirmMesg("Import " + HMA.escapeHtml(file.name) + " as <b>" + label + "</b>?<br>" + gTypeHints[type], function () {
+            showConfirmMesg("Import " + HMA.escapeHtml(file.name) + " as <b>" + label + "</b>?", function () {
                 var form = new FormData();
                 form.append("importType", type);
                 form.append("file", file);
