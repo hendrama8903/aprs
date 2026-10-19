@@ -1,7 +1,5 @@
 <script type="text/javascript">
-    var gCanAdd = @json($add);
     var gCanEdit = @json($edit);
-    var gCanDelete = @json($delete);
     var gTree = null;
     var gNodes = [];
     var gScreenMode = null;
@@ -106,7 +104,8 @@
             }
         });
 
-        var columns = gColumns.concat(HMA.col.audit()).concat([HMA.col.actions(rowActions)]);
+        // Aksi lewat toolbar di atas tree; tombol Add menebak tipe & parent dari baris yang dipilih.
+        var columns = gColumns.concat(HMA.col.audit());
         $.each(columns, function (_, c) {
             if (c.dataField === "SortOrder") { c.sortOrder = "asc"; c.sortIndex = 0; }
             if (c.dataField === "NodeName") { c.sortOrder = "asc"; c.sortIndex = 1; }
@@ -146,7 +145,11 @@
             onSelectionChanged: function (e) {
                 var row = e.selectedRowsData[0];
                 $("#btn_edit, #btn_delete").prop("disabled", !row);
-            }
+                // Label Add mengikuti apa yang akan ditambahkan di bawah baris terpilih.
+                var d = defaultsFromSelection();
+                $("#btnAddLabel").text("Add " + gTypeText[d.type].title);
+            },
+            onRowDblClick: function (e) { if (gCanEdit) onEditPrepare(e.data); }
         }).dxTreeList("instance");
 
         $(window).on("resize", function () {
@@ -172,26 +175,6 @@
         var keys = {};
         $.each(gNodes, function (_, n) { if (n.ParentNodeId) keys[n.ParentNodeId] = true; });
         return Object.keys(keys);
-    }
-
-    function rowActions(row) {
-        var items = [];
-        if (gCanAdd) {
-            if (row.NodeType === "MENU") {
-                items.push({ css: "dp-menu-edit", icon: "fa-folder-o", label: "Add Sub Menu", onClick: function () { onAddPrepare("MENU", row.RecordId); } });
-                items.push({ css: "dp-menu-edit", icon: "fa-window-maximize", label: "Add Screen", onClick: function () { onAddPrepare("SCREEN", row.RecordId); } });
-            } else if (row.NodeType === "SCREEN") {
-                items.push({ css: "dp-menu-edit", icon: "fa-hand-pointer-o", label: "Add Button", onClick: function () { onAddPrepare("BUTTON", row.RecordId); } });
-            }
-        }
-        if (gCanEdit) {
-            items.push({ css: "dp-menu-edit", icon: "fa-pencil-square-o", label: "Edit", onClick: function () { onEditPrepare(row); } });
-        }
-        if (gCanDelete) {
-            if (items.length) items.push("divider");
-            items.push({ css: "dp-menu-delete", icon: "fa-trash-o", label: "Delete", onClick: function () { onDeletePrepare(row); } });
-        }
-        return items;
     }
 
     // Tombol Add menebak tipe & parent dari baris yang dipilih:

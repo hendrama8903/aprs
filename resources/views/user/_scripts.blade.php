@@ -22,6 +22,10 @@
         $("#btn_delete").on("click", function () {
             onDeletePrepare(gGrid.getSelectedRowKeys());
         });
+        $("#btn_resetPassword").on("click", function () {
+            var rows = gGrid.getSelectedRowsData();
+            if (rows.length === 1 && !rows[0].IsAdUser) onResetPasswordPrepare(rows[0]);
+        });
         $("#btn_refresh").on("click", onSearch);
         $("#btn_export").on("click", function () {
             window.location.href = "{{ url('/User/DownloadExcel') }}";

@@ -11,6 +11,7 @@
                 </ul>
             </div>
             <div class="dp-toolbar-right">
+                <button type="button" class="dp-btn dp-btn-primary" id="btn_open" disabled><i class="fa fa-check-square-o"></i> Open / Review</button>
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_refresh"><i class="fa fa-refresh"></i> Refresh</button>
             </div>
         </div>
@@ -55,12 +56,12 @@
                 { dataField: "TotalNew", caption: "New Amount (IDR)", dataType: "number", format: "#,##0" },
                 { dataField: "TotalDiffPct", caption: "Diff %", dataType: "number", width: 80, cellTemplate: function (c, o) { AprStatus.pct(o.value).appendTo(c); } },
                 { dataField: "CurrentStep", caption: "Your Step" },
-                { dataField: "PreparedBy", caption: "Prepared By" },
-                HMA.col.actions(function (row) {
-                    return [{ icon: "fa-check-square-o", label: "Review", onClick: function () { open(row.AprId); } }];
-                })
-            ]
+                { dataField: "PreparedBy", caption: "Prepared By" }
+            ],
+            onSelectionChanged: function (rows) { $("#btn_open").prop("disabled", !rows.length); }
         });
+
+        function activeGrid() { return $("#historyGrid").is(":visible") ? history : inbox; }
 
         var history = null;
         function showHistory() {
@@ -68,6 +69,7 @@
             history = HMA.createGrid("#historyGrid", {
                 key: "AprApprovalId",
                 url: "{{ url('/Approval/History') }}",
+                onSelectionChanged: function (rows) { $("#btn_open").prop("disabled", !rows.length); },
                 gridOptions: { selection: { mode: "single" }, onRowDblClick: function (e) { open(e.data.AprId); } },
                 columns: [
                     HMA.col.rowNumber(),
@@ -90,6 +92,12 @@
             $("#inboxGrid").toggle(tab === "inbox");
             $("#historyGrid").toggle(tab === "history");
             if (tab === "history") showHistory(); else inbox.refresh();
+            activeGrid().clearSelection();
+            $("#btn_open").prop("disabled", true);
+        });
+        $("#btn_open").on("click", function () {
+            var row = activeGrid().getSelectedRowsData()[0];
+            if (row) open(row.AprId);
         });
         $("#btn_refresh").on("click", function () {
             inbox.refresh();

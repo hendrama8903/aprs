@@ -154,66 +154,8 @@ var HMA = (function ($) {
                 { dataField: "ModifiedBy", caption: "Modified By", visible: false },
                 col.date("ModifiedDate", "Modified Date", true, false)
             ];
-        },
-        // itemsFn(row) -> array item menu aksi, lihat openRowMenu.
-        actions: function (itemsFn) {
-            return {
-                caption: "Action", alignment: "center", width: 70,
-                allowHiding: false, allowFiltering: false, allowSorting: false, allowHeaderFiltering: false,
-                fixed: true, fixedPosition: "right",
-                cellTemplate: function (container, options) {
-                    var items = itemsFn(options.data);
-                    if (!items || items.length === 0) return;
-                    $("<button>")
-                        .attr({ type: "button", title: "More actions" })
-                        .addClass("dp-act-kebab")
-                        .html('<i class="fa fa-ellipsis-v"></i>')
-                        .on("click", function (e) {
-                            e.stopPropagation();
-                            openRowMenu($(this), items);
-                        })
-                        .appendTo(container);
-                }
-            };
         }
     };
-
-    // ---------- Menu aksi per baris (kebab) ----------
-    // items: [{ css, icon, label, onClick }] atau "divider"
-    var $rowMenu = null;
-
-    function openRowMenu($btn, items) {
-        if (!$rowMenu) {
-            $rowMenu = $('<ul class="dropdown-menu dp-dropdown-menu" role="menu"></ul>')
-                .css({ position: "absolute", display: "none", "z-index": 2000, "min-width": "170px" })
-                .appendTo("body");
-            $(document).on("click", function () { $rowMenu.hide(); });
-        }
-
-        $rowMenu.empty();
-        $.each(items, function (_, item) {
-            if (item === "divider") {
-                $rowMenu.append('<li class="divider"></li>');
-                return;
-            }
-            var $li = $('<li><a href="#"></a></li>');
-            $li.find("a").addClass(item.css || "")
-                .append($("<i>").addClass("fa " + item.icon))
-                .append(document.createTextNode(" " + item.label))
-                .on("click", function (e) {
-                    e.preventDefault();
-                    $rowMenu.hide();
-                    item.onClick();
-                });
-            $rowMenu.append($li);
-        });
-
-        var offset = $btn.offset();
-        $rowMenu.show().css({
-            top: offset.top + $btn.outerHeight() + 4,
-            left: offset.left - $rowMenu.outerWidth() + $btn.outerWidth()
-        });
-    }
 
     // ---------- Halaman CRUD standar ----------
     // Menghubungkan toolbar (#btn_add/#btn_edit/#btn_delete/#btn_refresh/#btn_export),
@@ -222,10 +164,10 @@ var HMA = (function ($) {
     //   cfg.key         : field primary key, mis. "DepartmentId"
     //   cfg.keyParam    : nama parameter GetByKey, mis. "departmentId"
     //   cfg.urls        : { search, getByKey, save, remove, exportExcel }
-    //   cfg.canEdit / cfg.canDelete : hak akses (untuk menu aksi baris)
-    //   cfg.columns     : kolom data (kolom No, audit & Action ditambahkan otomatis)
+    //   cfg.canEdit     : hak edit (double-click baris membuka Edit)
+    //   cfg.columns     : kolom data (kolom No & audit ditambahkan otomatis)
     //   cfg.params()    : filter tambahan untuk Search
-    //   cfg.extraActions(row) : item menu aksi tambahan per baris
+    //   cfg.onSelectionChanged(rows) : untuk mengaktifkan tombol toolbar tambahan
     //   cfg.resetForm(), cfg.fillForm(data), cfg.collectForm() -> object, cfg.focusAdd, cfg.focusEdit
     function crudPage(cfg) {
         var page = { mode: null, grid: null };
@@ -279,22 +221,9 @@ var HMA = (function ($) {
             }, "Confirmation");
         };
 
-        var columns = [col.rowNumber()].concat(cfg.columns).concat(col.audit()).concat([
-            col.actions(function (row) {
-                var items = [];
-                if (cfg.canEdit) {
-                    items.push({ css: "dp-menu-edit", icon: "fa-pencil-square-o", label: "Edit", onClick: function () { page.edit(row[cfg.key]); } });
-                }
-                if (cfg.extraActions) {
-                    items = items.concat(cfg.extraActions(row) || []);
-                }
-                if (cfg.canDelete) {
-                    if (items.length) items.push("divider");
-                    items.push({ css: "dp-menu-delete", icon: "fa-trash-o", label: "Delete", onClick: function () { page.remove([row[cfg.key]]); } });
-                }
-                return items;
-            })
-        ]);
+        // Aksi (Add/Edit/Delete/Export) ada di toolbar di luar grid, bukan kolom Action per baris.
+        // Double-click baris = Edit.
+        var columns = [col.rowNumber()].concat(cfg.columns).concat(col.audit());
 
         $(function () {
             page.grid = createGrid("#datagrid", {
@@ -302,9 +231,13 @@ var HMA = (function ($) {
                 url: cfg.urls.search,
                 params: cfg.params,
                 columns: columns,
+                gridOptions: {
+                    onRowDblClick: function (e) { if (cfg.canEdit) page.edit(e.data[cfg.key]); }
+                },
                 onSelectionChanged: function (rows) {
                     $("#btn_edit").prop("disabled", rows.length !== 1);
                     $("#btn_delete").prop("disabled", rows.length < 1);
+                    if (cfg.onSelectionChanged) cfg.onSelectionChanged(rows);
                 }
             });
 
@@ -376,7 +309,6 @@ var HMA = (function ($) {
         gridHeight: gridHeight,
         createGrid: createGrid,
         col: col,
-        openRowMenu: openRowMenu,
         crudPage: crudPage,
         select2: select2,
         setSelect2Value: setSelect2Value,

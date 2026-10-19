@@ -4,7 +4,7 @@
 <div class="box-header dp-toolbar">
     <div class="dp-toolbar-left">
         @if ($add)
-            <button type="button" class="dp-btn dp-btn-primary" id="btn_add" title="Add under the selected row"><i class="fa fa-plus"></i> Add</button>
+            <button type="button" class="dp-btn dp-btn-primary" id="btn_add" title="Add under the selected row"><i class="fa fa-plus"></i> <span id="btnAddLabel">Add Menu</span></button>
         @endif
         @if ($edit)
             <button type="button" class="dp-btn dp-btn-outline" id="btn_edit" disabled><i class="fa fa-pencil-square-o"></i> Edit</button>

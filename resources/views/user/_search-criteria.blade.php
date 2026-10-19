@@ -6,6 +6,9 @@
         @if ($edit)
             <button type="button" class="dp-btn dp-btn-outline" id="btn_edit" disabled><i class="fa fa-pencil-square-o"></i> Edit</button>
         @endif
+        @if ($resetPassword)
+            <button type="button" class="dp-btn dp-btn-outline" id="btn_resetPassword" disabled><i class="fa fa-key"></i> Reset Password</button>
+        @endif
         @if ($delete)
             <button type="button" class="dp-btn dp-btn-outline-danger" id="btn_delete" disabled><i class="fa fa-trash-o"></i> Delete</button>
         @endif

@@ -4,8 +4,6 @@
 
 <script type="text/javascript">
     var gCanEdit = @json($edit);
-    var gCanDelete = @json($delete);
-    var gCanResetPassword = @json($resetPassword);
     var gGrid = null;
 
     $(document).ready(function () {
@@ -19,9 +17,14 @@
                     isActive: $("#filterStatus").val()
                 };
             },
+            gridOptions: {
+                onRowDblClick: function (e) { if (gCanEdit) onEditPrepare(e.data.UserId); }
+            },
             onSelectionChanged: function (rows) {
                 $("#btn_edit").prop("disabled", rows.length !== 1);
                 $("#btn_delete").prop("disabled", rows.length < 1);
+                // User Active Directory mengganti password lewat Windows.
+                $("#btn_resetPassword").prop("disabled", rows.length !== 1 || rows[0].IsAdUser);
             },
             columns: [
                 HMA.col.rowNumber(),
@@ -44,22 +47,7 @@
                 { dataField: "Phone", caption: "Phone", visible: false },
                 HMA.col.date("LastLoginDate", "Last Login", true),
                 HMA.col.status()
-            ].concat(HMA.col.audit()).concat([
-                HMA.col.actions(function (row) {
-                    var items = [];
-                    if (gCanEdit) {
-                        items.push({ css: "dp-menu-edit", icon: "fa-pencil-square-o", label: "Edit", onClick: function () { onEditPrepare(row.UserId); } });
-                    }
-                    if (gCanResetPassword && !row.IsAdUser) {
-                        items.push({ css: "dp-menu-history", icon: "fa-key", label: "Reset Password", onClick: function () { onResetPasswordPrepare(row); } });
-                    }
-                    if (gCanDelete) {
-                        if (items.length) items.push("divider");
-                        items.push({ css: "dp-menu-delete", icon: "fa-trash-o", label: "Delete", onClick: function () { onDeletePrepare([row.UserId]); } });
-                    }
-                    return items;
-                })
-            ])
+            ].concat(HMA.col.audit())
         });
     });
 </script>

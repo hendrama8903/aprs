@@ -8,8 +8,13 @@
                 @if ($add)
                     <a class="dp-btn dp-btn-primary" href="{{ url('/Apr/Form') }}"><i class="fa fa-plus"></i> New APR</a>
                 @endif
+                <button type="button" class="dp-btn dp-btn-outline" id="btn_open" disabled><i class="fa fa-folder-open-o"></i> Open</button>
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_toggleFilters"><i class="fa fa-filter"></i> Filters</button>
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_refresh"><i class="fa fa-refresh"></i> Refresh</button>
+            </div>
+            <div class="dp-toolbar-right">
+                <button type="button" class="dp-btn dp-btn-outline" id="btn_printApr" disabled><i class="fa fa-print"></i> Print APR</button>
+                <button type="button" class="dp-btn dp-btn-outline" id="btn_printLetter" disabled><i class="fa fa-download"></i> Print Letter</button>
             </div>
         </div>
         <div class="dp-filter-bar" id="filterBar">
@@ -48,7 +53,6 @@
 @include('apr._status')
 <script type="text/javascript">
     $(function () {
-        var canDelete = @json($delete);
         var formUrl = "{{ url('/Apr/Form') }}";
 
         function params() {
@@ -102,18 +106,27 @@
                 },
                 { dataField: "ExtDocNo", caption: "Letter No", visible: false },
                 { dataField: "PreparedBy", caption: "Prepared By" }
-            ].concat(HMA.col.audit()).concat([
-                HMA.col.actions(function (row) {
-                    var items = [
-                        { icon: "fa-folder-open-o", label: "Open", onClick: function () { window.location.href = formUrl + "?id=" + row.AprId; } },
-                        { icon: "fa-print", label: "Print APR", onClick: function () { window.open("{{ url('/Apr/PrintApr') }}?id=" + row.AprId); } }
-                    ];
-                    if (row.Status === "ISSUED") {
-                        items.push({ icon: "fa-envelope-o", label: "Print Letter", onClick: function () { window.open("{{ url('/Apr/PrintLetter') }}?id=" + row.AprId); } });
-                    }
-                    return items;
-                })
-            ])
+            ].concat(HMA.col.audit()),
+            onSelectionChanged: function (rows) {
+                var row = rows[0];
+                $("#btn_open, #btn_printApr").prop("disabled", !row);
+                $("#btn_printLetter").prop("disabled", !row || row.Status !== "ISSUED");
+            }
+        });
+
+        function selected() { return grid.getSelectedRowsData()[0]; }
+
+        $("#btn_open").on("click", function () {
+            var row = selected();
+            if (row) window.location.href = formUrl + "?id=" + row.AprId;
+        });
+        $("#btn_printApr").on("click", function () {
+            var row = selected();
+            if (row) window.open("{{ url('/Apr/PrintApr') }}?id=" + row.AprId);
+        });
+        $("#btn_printLetter").on("click", function () {
+            var row = selected();
+            if (row && row.Status === "ISSUED") window.open("{{ url('/Apr/PrintLetter') }}?id=" + row.AprId);
         });
 
         $("#filterStatus, #filterSupplier, #filterDateFrom, #filterDateTo").on("change", function () { grid.refresh(); });
