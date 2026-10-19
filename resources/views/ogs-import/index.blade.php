@@ -115,7 +115,7 @@
     var gTypeHints = {
         ITEM: "",
         PRICE: "Replaces ALL price data with this file. Suppliers are created or renamed automatically.",
-        PO: "PO lines are inserted or updated by PO No + PO Line, so overlapping periods are safe. Columns: PO NO, PO LINE, PO DATE, ITEM CODE, SUPPLIER CODE, SUPPLIER NAME, CURRENCY, QTY, UNIT PRICE."
+        PO: ""
     };
     var gTypeNames = { ITEM: "Item Master", PRICE: "Price Master", PO: "PO Transaction" };
 
