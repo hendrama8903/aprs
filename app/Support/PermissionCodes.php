@@ -22,6 +22,9 @@ final class PermissionCodes
     public const SupplierAdd = 'SUPPLIER-ADD';
     public const SupplierEdit = 'SUPPLIER-EDIT';
     public const SupplierDelete = 'SUPPLIER-DELETE';
+    public const ExchangeRateAdd = 'EXCHANGERATE-ADD';
+    public const ExchangeRateEdit = 'EXCHANGERATE-EDIT';
+    public const ExchangeRateDelete = 'EXCHANGERATE-DELETE';
 
     // ---------- Price Confirmation ----------
     public const NewPriceEdit = 'NEWPRICE-EDIT';

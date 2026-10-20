@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\UserAccount;
 use App\Repositories\AprRepo;
+use App\Repositories\ExchangeRateRepo;
 use App\Support\DBResult;
 use App\Support\PermissionCodes;
 use App\Support\SessionAuth;
@@ -81,6 +82,17 @@ class AprController extends Controller
             (string) $request->input('purchaseFrom'),
             (string) $request->input('purchaseTo'),
         ));
+    }
+
+    /** Kurs dari master Exchange Rate: current pada tanggal dokumen, new pada awal effective period. */
+    public function exchangeRates(Request $request, ExchangeRateRepo $exchangeRateRepo)
+    {
+        $date = fn (string $key) => \DateTime::createFromFormat('!Y-m-d', (string) $request->input($key)) ? (string) $request->input($key) : null;
+
+        return $this->jsonData(fn () => [
+            'Current' => ($d = $date('docDate')) ? $exchangeRateRepo->ratesOn($d) : null,
+            'New' => ($d = $date('effectiveFrom')) ? $exchangeRateRepo->ratesOn($d) : null,
+        ]);
     }
 
     public function save(Request $request)

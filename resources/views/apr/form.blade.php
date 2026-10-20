@@ -78,7 +78,7 @@
                 </div>
             </div>
             <div class="apr-field apr-span2">
-                <label>Exchange Rate (IDR) <small>- required when items are in USD / JPY</small></label>
+                <label>Exchange Rate (IDR) <small>- from Exchange Rate master, required when items are in USD / JPY</small></label>
                 <div class="apr-rate">
                     <div class="apr-rate-h"></div><div class="apr-rate-h">Current</div><div class="apr-rate-h">New</div><div class="apr-rate-h">%</div>
                     <div class="apr-rate-cur">USD</div>
@@ -258,6 +258,7 @@
         var urls = {
             getByKey: "{{ url('/Apr/GetByKey') }}",
             candidates: "{{ url('/Apr/CandidateItems') }}",
+            exchangeRates: "{{ url('/Apr/ExchangeRates') }}",
             save: "{{ url('/Apr/Save') }}",
             submit: "{{ url('/Apr/Submit') }}",
             remove: "{{ url('/Apr/Delete') }}",
@@ -288,6 +289,19 @@
             if (currency === "USD") return num($(isNew ? "#rateUsdNew" : "#rateUsdCurrent").val());
             if (currency === "JPY") return num($(isNew ? "#rateJpyNew" : "#rateJpyCurrent").val());
             return 1;
+        }
+        // Isi kurs dari master Exchange Rate: current = tanggal dokumen, new = awal effective period.
+        // Kurs yang tidak ada di master dibiarkan (tetap bisa diisi manual).
+        function loadRates() {
+            if (!editable) return;
+            HMA.post(urls.exchangeRates, { docDate: $("#docDate").val(), effectiveFrom: $("#effectiveFrom").val() }, function (result) {
+                $.each([["Current", "Current"], ["New", "New"]], function (_, k) {
+                    var rates = result.data[k[0]] || {};
+                    if (rates.USD) $("#rateUsd" + k[1]).val(rates.USD);
+                    if (rates.JPY) $("#rateJpy" + k[1]).val(rates.JPY);
+                });
+                refreshGrid();
+            }, { successMessage: false });
         }
         function firstOfMonth(m) { return m.clone().startOf("month").format("YYYY-MM-DD"); }
 
@@ -705,9 +719,11 @@
                 loadAddresses(null);
                 applyMode({ Submit: false });
                 refreshTotals();
+                loadRates();
             }
 
             $(".apr-rate-input").on("input", refreshGrid);
+            $("#docDate, #effectiveFrom").on("change", loadRates);
             $("#btn_addItems").on("click", openCandidates);
             $("#btn_addSelected").on("click", addSelected);
             $("#btn_removeItems").on("click", function () {

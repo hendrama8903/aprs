@@ -66,6 +66,7 @@ class DatabaseSeeder extends Seeder
         $supplierMenu = $menu('/Supplier/Index', $masterData, 'Supplier', 'fa-truck', 30);
         $itemPriceMenu = $menu('/ItemPrice/Index', $masterData, 'Item Price', 'fa-tags', 40);
         $poMenu = $menu('/PoTransaction/Index', $masterData, 'PO Transaction', 'fa-shopping-cart', 50);
+        $exchangeRateMenu = $menu('/ExchangeRate/Index', $masterData, 'Exchange Rate', 'fa-exchange', 60);
 
         $administration = $group('Administration', 'fa-cogs', 90);
         $user = $menu('/User/Index', $administration, 'User', 'fa-user', 10);
@@ -92,6 +93,9 @@ class DatabaseSeeder extends Seeder
             [$supplierMenu, 'SUPPLIER-ADD', 'Add'],
             [$supplierMenu, 'SUPPLIER-EDIT', 'Edit'],
             [$supplierMenu, 'SUPPLIER-DELETE', 'Delete'],
+            [$exchangeRateMenu, 'EXCHANGERATE-ADD', 'Add'],
+            [$exchangeRateMenu, 'EXCHANGERATE-EDIT', 'Edit'],
+            [$exchangeRateMenu, 'EXCHANGERATE-DELETE', 'Delete'],
             [$user, 'USER-ADD', 'Add'],
             [$user, 'USER-EDIT', 'Edit'],
             [$user, 'USER-DELETE', 'Delete'],
@@ -123,11 +127,11 @@ class DatabaseSeeder extends Seeder
         $grant($roles['ADMIN'], Menu::query()->pluck('menu_id')->all(), array_keys($permissionIds));
         $grant($roles['PUD_STAFF'], [
             $dashboard->menu_id, $priceConfirmation->menu_id, $newPriceMenu->menu_id, $aprList->menu_id,
-            $masterData->menu_id, $itemMenu->menu_id, $supplierMenu->menu_id, $itemPriceMenu->menu_id, $poMenu->menu_id,
-        ], ['NEWPRICE-EDIT', 'APR-ADD', 'APR-EDIT', 'APR-DELETE', 'APR-ISSUE', 'SUPPLIER-ADD', 'SUPPLIER-EDIT', 'SUPPLIER-DELETE', 'ITEM-ADD', 'ITEM-EDIT', 'ITEM-DELETE', 'ITEM-UPLOAD', 'ITEMPRICE-ADD', 'ITEMPRICE-EDIT', 'ITEMPRICE-DELETE', 'ITEMPRICE-UPLOAD', 'POTRANSACTION-UPLOAD']);
+            $masterData->menu_id, $itemMenu->menu_id, $supplierMenu->menu_id, $itemPriceMenu->menu_id, $poMenu->menu_id, $exchangeRateMenu->menu_id,
+        ], ['NEWPRICE-EDIT', 'APR-ADD', 'APR-EDIT', 'APR-DELETE', 'APR-ISSUE', 'SUPPLIER-ADD', 'SUPPLIER-EDIT', 'SUPPLIER-DELETE', 'ITEM-ADD', 'ITEM-EDIT', 'ITEM-DELETE', 'ITEM-UPLOAD', 'ITEMPRICE-ADD', 'ITEMPRICE-EDIT', 'ITEMPRICE-DELETE', 'ITEMPRICE-UPLOAD', 'POTRANSACTION-UPLOAD', 'EXCHANGERATE-ADD', 'EXCHANGERATE-EDIT', 'EXCHANGERATE-DELETE']);
         $grant($roles['APPROVER'], [
             $dashboard->menu_id, $priceConfirmation->menu_id, $aprList->menu_id, $approvalInbox->menu_id,
-            $masterData->menu_id, $itemPriceMenu->menu_id,
+            $masterData->menu_id, $itemPriceMenu->menu_id, $exchangeRateMenu->menu_id,
         ], []);
         $grant($roles['VIEWER'], [$dashboard->menu_id, $priceConfirmation->menu_id, $aprList->menu_id], []);
 

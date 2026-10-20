@@ -4,6 +4,7 @@ use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ApprovalSettingController;
 use App\Http\Controllers\AprController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ItemPriceController;
@@ -83,6 +84,15 @@ Route::middleware('menu.access:/PoTransaction/Index')->group(function () {
     Route::get('/PoTransaction/DownloadExcel', [PoTransactionController::class, 'downloadExcel']);
 });
 
+Route::middleware('menu.access:/ExchangeRate/Index')->group(function () {
+    Route::get('/ExchangeRate/Index', [ExchangeRateController::class, 'index']);
+    Route::post('/ExchangeRate/Search', [ExchangeRateController::class, 'search']);
+    Route::post('/ExchangeRate/GetByKey', [ExchangeRateController::class, 'getByKey']);
+    Route::post('/ExchangeRate/AddEdit', [ExchangeRateController::class, 'addEdit']);
+    Route::post('/ExchangeRate/DeleteMultiple', [ExchangeRateController::class, 'deleteMultiple']);
+    Route::get('/ExchangeRate/DownloadExcel', [ExchangeRateController::class, 'downloadExcel']);
+});
+
 // ---------- Price Confirmation ----------
 
 Route::middleware('menu.access:/NewPrice/Index')->group(function () {
@@ -97,6 +107,7 @@ Route::middleware('menu.access:/Apr/Index')->group(function () {
     Route::get('/Apr/Index', [AprController::class, 'index']);
     Route::post('/Apr/Search', [AprController::class, 'search']);
     Route::post('/Apr/CandidateItems', [AprController::class, 'candidateItems']);
+    Route::post('/Apr/ExchangeRates', [AprController::class, 'exchangeRates']);
     Route::post('/Apr/Save', [AprController::class, 'save']);
     Route::post('/Apr/Delete', [AprController::class, 'delete']);
     Route::post('/Apr/Submit', [AprController::class, 'submit']);
