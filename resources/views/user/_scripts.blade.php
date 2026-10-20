@@ -2,7 +2,6 @@
     var gScreenMode = null;
 
     $(document).ready(function () {
-        HMA.select2("#addEditDepartment", "{{ url('/Lookup/Department') }}", "Select department", "#modalAddEdit");
         HMA.select2("#addEditRole", "{{ url('/Lookup/Role') }}", "Select role", "#modalAddEdit");
         HMA.select2("#addEditSupervisor", "{{ url('/Lookup/UserList') }}", "Select supervisor", "#modalAddEdit");
 
@@ -57,7 +56,6 @@
         $("#addEditUsername").val("").prop("disabled", false);
         $("#addEditPassword, #addEditFullName, #addEditEmployeeNo, #addEditEmail, #addEditPhone").val("");
         $("input[name='addEditLoginType'][value='LOCAL']").prop("checked", true);
-        HMA.setSelect2Value("#addEditDepartment", null);
         HMA.setSelect2Value("#addEditRole", null);
         HMA.setSelect2Value("#addEditSupervisor", null);
         $("#addEditIsActive").prop("checked", true);
@@ -80,7 +78,6 @@
             $("#addEditEmail").val(data.Email);
             $("#addEditPhone").val(data.Phone);
             $("input[name='addEditLoginType'][value='" + (data.IsAdUser ? "AD" : "LOCAL") + "']").prop("checked", true);
-            HMA.setSelect2Value("#addEditDepartment", data.DepartmentId, data.DepartmentName);
             HMA.setSelect2Value("#addEditRole", data.RoleId, data.RoleName);
             HMA.setSelect2Value("#addEditSupervisor", data.SupervisorUserId, data.SupervisorName);
             $("#addEditIsActive").prop("checked", data.IsActive);
@@ -100,7 +97,6 @@
             EmployeeNo: $("#addEditEmployeeNo").val(),
             Email: $("#addEditEmail").val(),
             Phone: $("#addEditPhone").val(),
-            DepartmentId: $("#addEditDepartment").val(),
             RoleId: $("#addEditRole").val(),
             SupervisorUserId: $("#addEditSupervisor").val(),
             IsAdUser: isAdLogin(),

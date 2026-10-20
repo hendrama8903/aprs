@@ -10,15 +10,21 @@ namespace App\Support;
 final class PermissionCodes
 {
     // ---------- Master Data ----------
-    public const DepartmentAdd = 'DEPARTMENT-ADD';
-    public const DepartmentEdit = 'DEPARTMENT-EDIT';
-    public const DepartmentDelete = 'DEPARTMENT-DELETE';
-
-    // ---------- OGS Data ----------
-    public const OgsImportUpload = 'OGSIMPORT-UPLOAD';
+    public const ItemAdd = 'ITEM-ADD';
+    public const ItemEdit = 'ITEM-EDIT';
+    public const ItemDelete = 'ITEM-DELETE';
+    public const ItemUpload = 'ITEM-UPLOAD';
+    public const ItemPriceAdd = 'ITEMPRICE-ADD';
+    public const ItemPriceEdit = 'ITEMPRICE-EDIT';
+    public const ItemPriceDelete = 'ITEMPRICE-DELETE';
+    public const ItemPriceUpload = 'ITEMPRICE-UPLOAD';
+    public const PoTransactionUpload = 'POTRANSACTION-UPLOAD';
+    public const SupplierAdd = 'SUPPLIER-ADD';
     public const SupplierEdit = 'SUPPLIER-EDIT';
+    public const SupplierDelete = 'SUPPLIER-DELETE';
 
     // ---------- Price Confirmation ----------
+    public const NewPriceEdit = 'NEWPRICE-EDIT';
     public const AprAdd = 'APR-ADD';
     public const AprEdit = 'APR-EDIT';
     public const AprDelete = 'APR-DELETE';

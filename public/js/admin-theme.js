@@ -31,6 +31,11 @@ $(function () {
     // otomatis dibuka lewat class .search-open (terpisah dari .open manual
     // supaya mengosongkan pencarian tidak ikut menutup grup yang memang
     // sedang dibuka user).
+    // Kosongkan nilai sisa autofill / restore form saat kembali (back-forward cache).
+    $(window).on('pageshow', function () {
+        $('#admMenuSearch').val('').trigger('input');
+    });
+
     $(document).on('input', '#admMenuSearch', function () {
         var query = $(this).val().trim().toLowerCase();
         var $topLevel = $('.adm-sidepanel .sidebar-menu > li');

@@ -44,7 +44,8 @@
             <div class="adm-sidepanel">
                 <div class="adm-menu-search">
                     <i class="fa fa-search"></i>
-                    <input type="text" id="admMenuSearch" placeholder="Search menu..." autocomplete="off">
+                    {{-- readonly sampai fokus: mencegah Chrome mengisi username tersimpan ke kolom ini --}}
+                    <input type="search" id="admMenuSearch" name="adm_menu_search" placeholder="Search menu..." autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
                 </div>
                 @include('partials.main-menu')
             </div>

@@ -16,9 +16,6 @@ final class SessionKeys
     public const RoleId = 'RoleId';
     public const RoleCode = 'RoleCode';
     public const RoleName = 'RoleName';
-    public const DepartmentId = 'DepartmentId';
-    public const DepartmentCode = 'DepartmentCode';
-    public const DepartmentName = 'DepartmentName';
     public const MenuHtml = 'MenuHtml';
     public const Menus = 'Menus';
     public const Permissions = 'Permissions';

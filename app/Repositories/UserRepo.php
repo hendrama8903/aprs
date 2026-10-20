@@ -15,15 +15,14 @@ class UserRepo
     private const MIN_PASSWORD_LENGTH = 8;
 
     /** @return object[] */
-    public function search(?string $keyword, ?int $departmentId, ?int $roleId, ?bool $isActive): array
+    public function search(?string $keyword, ?int $roleId, ?bool $isActive): array
     {
         return UserAccount::query()
-            ->with(['department', 'role', 'supervisor'])
+            ->with(['role', 'supervisor'])
             ->when($keyword, fn ($q) => $q->where(fn ($q2) => $q2
                 ->where('username', 'like', "%{$keyword}%")
                 ->orWhere('full_name', 'like', "%{$keyword}%")
                 ->orWhere('employee_no', 'like', "%{$keyword}%")))
-            ->when($departmentId, fn ($q) => $q->where('department_id', $departmentId))
             ->when($roleId, fn ($q) => $q->where('role_id', $roleId))
             ->when($isActive !== null, fn ($q) => $q->where('is_active', $isActive))
             ->orderBy('username')
@@ -35,7 +34,7 @@ class UserRepo
 
     public function getByKey(int $userId): ?object
     {
-        $user = UserAccount::query()->with(['department', 'role', 'supervisor'])->find($userId);
+        $user = UserAccount::query()->with(['role', 'supervisor'])->find($userId);
 
         return $user === null ? null : $this->mapUser($user);
     }
@@ -69,7 +68,6 @@ class UserRepo
             'email' => $this->nullIfBlank($data['Email'] ?? null),
             'phone' => $this->nullIfBlank($data['Phone'] ?? null),
             'employee_no' => $this->nullIfBlank($data['EmployeeNo'] ?? null),
-            'department_id' => $data['DepartmentId'] ?? null,
             'role_id' => $data['RoleId'],
             'supervisor_user_id' => $data['SupervisorUserId'] ?? null,
             'is_ad_user' => $isAdUser,
@@ -108,7 +106,6 @@ class UserRepo
             'email' => $this->nullIfBlank($data['Email'] ?? null),
             'phone' => $this->nullIfBlank($data['Phone'] ?? null),
             'employee_no' => $this->nullIfBlank($data['EmployeeNo'] ?? null),
-            'department_id' => $data['DepartmentId'] ?? null,
             'role_id' => $data['RoleId'],
             'supervisor_user_id' => $data['SupervisorUserId'] ?? null,
             'is_ad_user' => $isAdUser,
@@ -194,8 +191,6 @@ class UserRepo
             'Email' => $u->email,
             'Phone' => $u->phone,
             'EmployeeNo' => $u->employee_no,
-            'DepartmentId' => $u->department_id,
-            'DepartmentName' => $u->department !== null ? "{$u->department->department_code} - {$u->department->department_name}" : null,
             'RoleId' => $u->role_id,
             'RoleName' => $u->role->role_name,
             'SupervisorUserId' => $u->supervisor_user_id,

@@ -21,6 +21,7 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
  *
  * - ITEM : upsert per item_code. Item yang tidak ada di file tidak dihapus.
  * - PRICE: snapshot lengkap, tabel item_prices diganti penuh. Supplier di-upsert dari file yang sama.
+ *          Tidak ada flag aktif: harga berlaku = Time Control mencakup tanggal acuan (lihat AprRepo::currentPrices).
  * - PO   : upsert per (PO NO, PO LINE), jadi export beberapa periode boleh tumpang tindih.
  * Kolom dicari berdasarkan nama header (bukan posisi), jadi urutan kolom export OGS boleh berubah.
  * Temuan kualitas data dicatat sebagai warning, tidak menggagalkan import.
@@ -31,7 +32,8 @@ class OgsImportRepo
 
     private const ItemColumns = [
         'ITEM CODE' => true, 'ITEM NAME' => true, 'UNIT' => true, 'CATEGORY' => true,
-        'MINUMUM ORDER' => false, 'TOOL NUMBER' => false, 'DRAWING NUMBER' => false,
+        // MINUMUM ORDER di export OGS tidak dipakai APR, jadi tidak dibaca.
+        'TOOL NUMBER' => false, 'DRAWING NUMBER' => false,
         'TC FROM' => false, 'TC TO' => false, 'REMARK' => false,
     ];
 
@@ -39,10 +41,13 @@ class OgsImportRepo
         'ITEM CODE' => true, 'ITEM NAME' => true, 'UNIT' => false,
         'SUPPLIER PLANT CODE' => false, 'SUPPLIER CODE' => true, 'SUPPLIER NAME' => true,
         'CURRENCY' => true, 'PRICE' => true, 'QUOTATION' => false,
-        'TIME CONTROL FROM' => false, 'TIME CONTROL TO' => false,
+        // Tidak ada kolom ACTIVE: harga berlaku ditentukan dari Time Control, jadi wajib.
+        'TIME CONTROL FROM' => true, 'TIME CONTROL TO' => true,
         'INPUT BY' => false, 'INPUT DATE' => false, 'UPDATE BY' => false, 'UPDATE DATE' => false,
-        'ACTIVE' => true,
     ];
+
+    /** Mata uang yang punya kurs di dokumen APR. */
+    private const PriceCurrencies = ['IDR', 'USD', 'JPY'];
 
     private const PoColumns = [
         'PO NO' => true, 'PO LINE' => true, 'PO DATE' => true,
@@ -53,19 +58,23 @@ class OgsImportRepo
 
     /** @var string[] */
     private array $warnings = [];
-    private int $warningCount = 0;
 
-    /** @return object[] */
-    public function search(?string $importType): array
+    /** Validasi file upload Excel; mengembalikan pesan error atau null kalau valid. */
+    public static function validateUploadFile(?\Illuminate\Http\UploadedFile $file): ?string
     {
-        return OgsImport::query()
-            ->when($importType, fn ($q) => $q->where('import_type', $importType))
-            ->orderByDesc('import_id')
-            ->limit(500)
-            ->get()
-            ->map(fn (OgsImport $i) => $this->mapImport($i, false))
-            ->all();
+        if ($file === null || !$file->isValid()) {
+            return 'Please choose a file to upload.';
+        }
+        if (!in_array(strtolower($file->getClientOriginalExtension()), ['xlsx', 'xls'], true)) {
+            return 'Only Excel files (.xlsx / .xls) are allowed.';
+        }
+        if ($file->getSize() > 20 * 1024 * 1024) {
+            return 'File is too large (max 20 MB).';
+        }
+
+        return null;
     }
+    private int $warningCount = 0;
 
     public function getByKey(int $importId): ?object
     {
@@ -95,13 +104,13 @@ class OgsImportRepo
         [$columns, $example] = match ($importType) {
             OgsImport::TypeItem => [self::ItemColumns, [
                 'ITEM CODE' => '10030010', 'ITEM NAME' => 'ABRASIVE PAPER 9" X 11" #80', 'UNIT' => 'LBR', 'CATEGORY' => 'CONSUMABLE',
-                'MINUMUM ORDER' => '1', 'TC FROM' => '2012-01-01', 'TC TO' => '2089-12-31',
+                'TC FROM' => '2012-01-01', 'TC TO' => '2089-12-31',
             ]],
             OgsImport::TypePrice => [self::PriceColumns, [
                 'ITEM CODE' => '10030010', 'ITEM NAME' => 'ABRASIVE PAPER 9" X 11" #80', 'UNIT' => 'LBR',
                 'SUPPLIER PLANT CODE' => '01', 'SUPPLIER CODE' => '1003', 'SUPPLIER NAME' => 'EXAMPLE SUPPLIER PT.',
                 'CURRENCY' => 'IDR', 'PRICE' => 2060, 'QUOTATION' => 'PC OCT-MAR26',
-                'TIME CONTROL FROM' => '2025-10-01', 'TIME CONTROL TO' => '2026-03-31', 'ACTIVE' => 'TRUE',
+                'TIME CONTROL FROM' => '2026-04-01', 'TIME CONTROL TO' => '2027-03-31',
             ]],
             OgsImport::TypePo => [self::PoColumns, [
                 'PO NO' => 'PO25-00001', 'PO LINE' => 1, 'PO DATE' => '2025-07-15', 'ITEM CODE' => '10030010',
@@ -234,7 +243,6 @@ class OgsImportRepo
                 'item_name' => mb_substr($name, 0, 150),
                 'unit' => $this->nullable($this->text($r, $map, 'UNIT'), 20),
                 'category' => $this->nullable($this->text($r, $map, 'CATEGORY'), 50),
-                'minimum_order' => $this->nullable($this->text($r, $map, 'MINUMUM ORDER'), 20),
                 'tool_number' => $this->nullable($this->text($r, $map, 'TOOL NUMBER'), 100),
                 'drawing_number' => $this->nullable($this->text($r, $map, 'DRAWING NUMBER'), 100),
                 'tc_from' => $this->date($r, $map, 'TC FROM', $line)?->toDateString(),
@@ -256,7 +264,7 @@ class OgsImportRepo
         foreach (array_chunk(array_values($records), 500) as $chunk) {
             // created_* tidak ikut di-update supaya jejak import pertama tetap ada.
             Item::query()->upsert($chunk, ['item_code'], [
-                'item_name', 'unit', 'category', 'minimum_order', 'tool_number', 'drawing_number',
+                'item_name', 'unit', 'category', 'tool_number', 'drawing_number',
                 'tc_from', 'tc_to', 'remark', 'last_import_id', 'updated_by', 'updated_at',
             ]);
         }
@@ -285,21 +293,30 @@ class OgsImportRepo
         $records = [];
         $missingItems = [];
         $badPlants = [];
-        $activeKeys = [];
+        $periods = [];   // item|supplier -> [[from, to, line], ...] untuk cek periode tumpang tindih
+        $today = now()->toDateString();
 
         foreach ($rows as $index => $r) {
             $line = $index + 2;
             $itemCode = $this->text($r, $map, 'ITEM CODE');
             $supplierCode = $this->text($r, $map, 'SUPPLIER CODE');
             $priceRaw = $r[$map['PRICE']] ?? null;
+            $currency = mb_strtoupper($this->text($r, $map, 'CURRENCY'));
+            $tcFrom = $this->date($r, $map, 'TIME CONTROL FROM', $line)?->toDateString();
+            $tcTo = $this->date($r, $map, 'TIME CONTROL TO', $line)?->toDateString();
+            $label = "Row {$line}: item {$itemCode} / supplier {$supplierCode}";
 
-            if ($supplierCode === '' || !isset($supplierIds[$supplierCode])) {
-                $this->warn("Row {$line}: item {$itemCode} has no supplier code, skipped.");
-                $skipped++;
-                continue;
-            }
-            if (!is_numeric($priceRaw)) {
-                $this->warn("Row {$line}: item {$itemCode} / supplier {$supplierCode} has an invalid price '{$priceRaw}', skipped.");
+            $error = match (true) {
+                $supplierCode === '' || !isset($supplierIds[$supplierCode]) => 'has no supplier code',
+                !is_numeric($priceRaw) => "has an invalid price '{$priceRaw}'",
+                (float) $priceRaw <= 0 => 'has a price of zero or less',
+                !in_array($currency, self::PriceCurrencies, true) => "has currency '{$currency}' (only " . implode(', ', self::PriceCurrencies) . ' are supported)',
+                $tcFrom === null || $tcTo === null => 'has an empty or invalid time control',
+                $tcFrom > $tcTo => "has time control from {$tcFrom} later than to {$tcTo}",
+                default => null,
+            };
+            if ($error !== null) {
+                $this->warn("{$label} {$error}, skipped.");
                 $skipped++;
                 continue;
             }
@@ -313,10 +330,7 @@ class OgsImportRepo
                 $badPlants[$plant] = ($badPlants[$plant] ?? 0) + 1;
             }
 
-            $isActive = $this->bool($r[$map['ACTIVE']] ?? null);
-            if ($isActive) {
-                $activeKeys[$itemCode . '|' . $supplierCode][] = $line;
-            }
+            $periods[$itemCode . '|' . $supplierCode][] = [$tcFrom, $tcTo, $line];
 
             $records[] = [
                 'item_code' => mb_substr($itemCode, 0, 20),
@@ -325,19 +339,24 @@ class OgsImportRepo
                 'item_id' => $itemIds[$itemCode] ?? null,
                 'supplier_id' => $supplierIds[$supplierCode],
                 'supplier_plant_code' => $this->nullable($plant, 5),
-                'currency' => mb_strtoupper(mb_substr($this->text($r, $map, 'CURRENCY'), 0, 3)),
+                'currency' => $currency,
                 'price' => (float) $priceRaw,
                 'quotation' => $this->nullable($this->text($r, $map, 'QUOTATION'), 50),
-                'tc_from' => $this->date($r, $map, 'TIME CONTROL FROM', $line)?->toDateString(),
-                'tc_to' => $this->date($r, $map, 'TIME CONTROL TO', $line)?->toDateString(),
+                'tc_from' => $tcFrom,
+                'tc_to' => $tcTo,
                 'ogs_input_by' => $this->nullable($this->text($r, $map, 'INPUT BY'), 50),
                 'ogs_input_date' => $this->date($r, $map, 'INPUT DATE', $line, true)?->toDateTimeString(),
                 'ogs_update_by' => $this->nullable($this->text($r, $map, 'UPDATE BY'), 50),
                 'ogs_update_date' => $this->date($r, $map, 'UPDATE DATE', $line, true)?->toDateTimeString(),
-                'is_active' => $isActive,
                 'import_id' => $import->import_id,
+                'created_by' => $loginUser,
                 'created_at' => $now,
             ];
+        }
+
+        // Price master diganti penuh: kalau tidak ada satu pun baris valid, batalkan supaya data lama tidak hilang.
+        if ($records === []) {
+            throw new \RuntimeException('No valid price rows found in the file, nothing was imported. Check the warnings: ' . implode(' | ', array_slice($this->warnings, 0, 5)));
         }
 
         foreach (array_chunk($records, 500) as $chunk) {
@@ -351,13 +370,29 @@ class OgsImportRepo
         if ($badPlants !== []) {
             $this->warn('Non-standard supplier plant code (expected 2 digits): ' . implode(', ', array_map(fn ($v, $n) => "'{$v}' ({$n} rows)", array_keys($badPlants), $badPlants)));
         }
-        $duplicates = array_filter($activeKeys, fn ($lines) => count($lines) > 1);
-        if ($duplicates !== []) {
-            $this->warn(count($duplicates) . ' item/supplier pair(s) have more than one ACTIVE price. Examples: ' . implode('; ', array_map(
+        // Periode tumpang tindih = dua harga berlaku di tanggal yang sama (APR memakai yang TC From-nya paling baru).
+        $overlaps = [];
+        $noValidToday = 0;
+        foreach ($periods as $key => $list) {
+            usort($list, fn ($a, $b) => [$a[0], $a[1]] <=> [$b[0], $b[1]]);
+            for ($i = 1; $i < count($list); $i++) {
+                if ($list[$i][0] <= $list[$i - 1][1]) {
+                    $overlaps[$key][] = "{$list[$i - 1][2]} & {$list[$i][2]}";
+                }
+            }
+            if (!array_filter($list, fn ($p) => $p[0] <= $today && $p[1] >= $today)) {
+                $noValidToday++;
+            }
+        }
+        if ($overlaps !== []) {
+            $this->warn(count($overlaps) . ' item/supplier pair(s) have overlapping time control periods; APR uses the one with the latest TC From. Examples: ' . implode('; ', array_map(
                 fn ($key, $lines) => str_replace('|', ' / ', $key) . ' (rows ' . implode(', ', $lines) . ')',
-                array_slice(array_keys($duplicates), 0, 10),
-                array_slice($duplicates, 0, 10),
+                array_slice(array_keys($overlaps), 0, 10),
+                array_slice($overlaps, 0, 10),
             )));
+        }
+        if ($noValidToday > 0) {
+            $this->warn("{$noValidToday} item/supplier pair(s) have no price valid today (time control expired or not started yet). They can still be used in APR and are marked as expired.");
         }
 
         return [
@@ -532,15 +567,6 @@ class OgsImportRepo
     private function nullable(string $value, int $maxLength): ?string
     {
         return $value === '' ? null : mb_substr($value, 0, $maxLength);
-    }
-
-    private function bool(mixed $value): bool
-    {
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        return in_array(mb_strtoupper(trim((string) $value)), ['TRUE', '1', 'Y', 'YES'], true);
     }
 
     /** Tanggal OGS berupa serial Excel; nilai < 1 hanya berisi jam dan dianggap tidak valid. */

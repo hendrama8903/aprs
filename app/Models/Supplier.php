@@ -19,4 +19,10 @@ class Supplier extends Model
     {
         return $this->hasMany(ItemPrice::class, 'supplier_id', 'supplier_id');
     }
+
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(SupplierAddress::class, 'supplier_id', 'supplier_id')
+            ->orderByDesc('is_default')->orderBy('label');
+    }
 }

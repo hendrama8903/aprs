@@ -36,6 +36,11 @@
                 <label>Supplier <span class="text-red">*</span></label>
                 <select class="form-control apr-input" id="supplierId"></select>
             </div>
+            <div class="apr-field apr-span2">
+                <label>Letter Address <span class="text-red">*</span> <small>- printed on the Price Confirmation letter</small></label>
+                <select class="form-control apr-input" id="supplierAddressId"></select>
+                <div class="apr-addr-preview" id="addressPreview"></div>
+            </div>
             <div class="apr-field">
                 <label>Document Date <span class="text-red">*</span></label>
                 <input type="date" class="form-control apr-input" id="docDate" />
@@ -97,7 +102,7 @@
         <div class="apr-toolbar" id="detailToolbar">
             <button type="button" class="dp-btn dp-btn-outline-primary" id="btn_addItems"><i class="fa fa-plus"></i> Add Items</button>
             <button type="button" class="dp-btn dp-btn-outline-danger" id="btn_removeItems" disabled><i class="fa fa-minus"></i> Remove Selected</button>
-            <span class="apr-legend"><i class="fa fa-exclamation-triangle text-yellow"></i> new price above highest PO price &nbsp; <i class="fa fa-pencil text-red"></i> remark required</span>
+            <span class="apr-legend"><i class="fa fa-clock-o text-yellow"></i> current price not valid on document date &nbsp; <i class="fa fa-exclamation-triangle text-yellow"></i> new price above highest PO price &nbsp; <i class="fa fa-pencil text-red"></i> remark required</span>
         </div>
         <div id="detailGrid"></div>
     </div>
@@ -240,6 +245,9 @@
     .apr-history .act.APPROVE { color: #17824F; }
     .apr-cell-warn { color: #9A6200; margin-left: 4px; }
     .apr-cell-need { color: #B42318; }
+    .apr-addr-preview { font-size: 12px; color: #4b5563; margin-top: 6px; white-space: pre-line; }
+    .apr-addr-preview .muted { color: #9ca3af; }
+    .apr-addr-preview .warn { color: #B42318; }
     @media (max-width: 1100px) { .apr-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .apr-row2 { grid-template-columns: 1fr; } }
 </style>
 <script type="text/javascript">
@@ -260,12 +268,15 @@
             list: "{{ $backUrl }}",
             printApr: "{{ url('/Apr/PrintApr') }}",
             printLetter: "{{ url('/Apr/PrintLetter') }}",
-            supplierLookup: "{{ url('/Lookup/Supplier') }}"
+            supplierLookup: "{{ url('/Lookup/Supplier') }}",
+            supplierAddress: "{{ url('/Lookup/SupplierAddress') }}"
         };
 
         var lines = [];       // baris detail (format sama dengan Details dari server)
         var editable = true;  // false setelah submit / tanpa hak edit
         var detailGrid, candidateGrid, noteAction;
+        var addresses = [];   // alamat aktif supplier terpilih (dari master)
+        var filling = false;  // true saat fill() mengisi supplier, supaya alamat tidak di-reset ke default
 
         // ---------- Util ----------
         function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
@@ -315,6 +326,18 @@
             detailGrid.option("dataSource", lines);
         }
 
+        // Current price + tanda kalau Time Control-nya tidak mencakup tanggal dokumen (lihat AprRepo::currentPrices).
+        function currentPriceCell(c, o) {
+            c.text(fmt(o.value));
+            var st = o.data.PriceStatus, to = o.data.PriceTcTo, from = o.data.PriceTcFrom;
+            if (st === "EXPIRED" || st === "NOT_YET_VALID") {
+                var tip = st === "EXPIRED"
+                    ? "Price time control expired on " + moment(to).format("DD-MM-YYYY")
+                    : "Price time control starts on " + moment(from).format("DD-MM-YYYY");
+                c.append($("<i class='fa fa-clock-o apr-cell-warn'>").attr("title", tip + " (document date " + moment($("#docDate").val()).format("DD-MM-YYYY") + ")"));
+            }
+        }
+
         // ---------- Grid detail ----------
         function buildDetailGrid() {
             detailGrid = $("#detailGrid").addClass("sg-grid").dxDataGrid($.extend(HMA.filterDefaults(), {
@@ -339,7 +362,7 @@
                     { dataField: "Unit", caption: "Unit", allowEditing: false, alignment: "center" },
                     { dataField: "Currency", caption: "Curr", allowEditing: false, alignment: "center" },
                     { dataField: "Qty", caption: "Qty (period)", dataType: "number", format: "#,##0.##", allowEditing: false },
-                    { dataField: "CurrentPrice", caption: "Current Price", dataType: "number", format: "#,##0.##", allowEditing: false },
+                    { dataField: "CurrentPrice", caption: "Current Price", dataType: "number", format: "#,##0.##", allowEditing: false, cellTemplate: currentPriceCell },
                     {
                         caption: "PO Price (period)", columns: [
                             { dataField: "PoCount", caption: "PO", dataType: "number", allowEditing: false, alignment: "center" },
@@ -398,8 +421,9 @@
                     { dataField: "ItemName", caption: "Item Name" },
                     { dataField: "Unit", caption: "Unit", alignment: "center" },
                     { dataField: "Currency", caption: "Curr", alignment: "center" },
-                    { dataField: "CurrentPrice", caption: "Current Price", dataType: "number", format: "#,##0.##" },
+                    { dataField: "CurrentPrice", caption: "Current Price", dataType: "number", format: "#,##0.##", cellTemplate: currentPriceCell },
                     { dataField: "Quotation", caption: "Quotation" },
+                    { dataField: "PriceTcTo", caption: "Valid Until", dataType: "date", format: "dd-MM-yyyy", alignment: "right" },
                     { dataField: "Qty", caption: "Qty (period)", dataType: "number", format: "#,##0.##" },
                     { dataField: "PoCount", caption: "PO", dataType: "number" },
                     { dataField: "PoAvgPrice", caption: "PO Avg", dataType: "number", format: "#,##0.##" },
@@ -408,11 +432,77 @@
             })).dxDataGrid("instance");
         }
 
+        // ---------- Letter address ----------
+        // Preview alamat yang akan tercetak: dari master (draft) atau snapshot dokumen (sudah submit / alamat sudah tidak ada).
+        function renderAddressPreview(a, note) {
+            var $p = $("#addressPreview").empty();
+            if (!a) {
+                $p.append($("<span class='muted'>").text(note || "No address selected."));
+                return;
+            }
+            var attn = a.AttentionName ? "\nAttn. " + a.AttentionName + (a.AttentionTitle ? " - " + a.AttentionTitle : "") : "";
+            $p.text(a.Address + attn);
+            if (note) $p.append($("<div class='warn'>").text(note));
+        }
+
+        function snapshotOf(h) {
+            return h && h.LetterAddress !== null ? {
+                AddressId: h.SupplierAddressId, Label: h.LetterAddressLabel, Address: h.LetterAddress,
+                AttentionName: h.LetterAttentionName, AttentionTitle: h.LetterAttentionTitle
+            } : null;
+        }
+
+        function selectedAddress() {
+            var id = parseInt($("#supplierAddressId").val(), 10);
+            return $.grep(addresses, function (a) { return a.AddressId === id; })[0] || null;
+        }
+
+        // Dokumen yang tidak bisa diedit: tampilkan snapshot apa adanya.
+        function showSnapshot(h) {
+            var snap = snapshotOf(h);
+            addresses = [];
+            $("#supplierAddressId").empty().append(new Option(snap ? snap.Label : "-", "", true, true));
+            renderAddressPreview(snap, snap ? null : "No letter address on this document.");
+        }
+
+        // selectedId: alamat tersimpan di dokumen, kosong = pilih default.
+        // snap: snapshot dokumen, untuk pesan kalau alamat tersimpan sudah tidak aktif / dihapus.
+        function loadAddresses(supplierId, selectedId, snap) {
+            var $sel = $("#supplierAddressId").empty();
+            addresses = [];
+            if (!supplierId) { renderAddressPreview(null, "Choose the supplier first."); return; }
+
+            $.get(urls.supplierAddress, { supplierId: supplierId }).done(function (result) {
+                addresses = result.status ? result.data : [];
+                $sel.append(new Option("Choose address", ""));
+                $.each(addresses, function (_, a) {
+                    $sel.append(new Option(a.Label + (a.IsDefault ? " (default)" : ""), a.AddressId));
+                });
+
+                var pick = null;
+                if (selectedId) {
+                    pick = $.grep(addresses, function (a) { return a.AddressId === selectedId; })[0] || null;
+                } else if (!snap) {
+                    pick = addresses[0] || null; // default selalu di urutan pertama
+                }
+                $sel.val(pick ? pick.AddressId : "");
+
+                if (!addresses.length) {
+                    renderAddressPreview(null, "This supplier has no address yet. Add one in the Supplier menu.");
+                } else if (!pick && snap) {
+                    renderAddressPreview(snap, "Address \"" + snap.Label + "\" is no longer available. Please choose another one.");
+                } else {
+                    renderAddressPreview(pick);
+                }
+            });
+        }
+
         // ---------- Form ----------
         function header() {
             return {
                 AprId: aprId,
                 SupplierId: $("#supplierId").val() || 0,
+                SupplierAddressId: $("#supplierAddressId").val() || 0,
                 DocDate: $("#docDate").val(),
                 PartCategory: $("#partCategory").val(),
                 PartStatus: $("#partStatus").val(),
@@ -452,7 +542,10 @@
 
         function fill(data) {
             var h = data.Header;
+            filling = true;
             HMA.setSelect2Value("#supplierId", h.SupplierId, h.SupplierCode + " - " + h.SupplierName);
+            filling = false;
+            if (data.Can.Edit) loadAddresses(h.SupplierId, h.SupplierAddressId, snapshotOf(h)); else showSnapshot(h);
             $("#docDate").val(h.DocDate);
             $("#partCategory").val(h.PartCategory);
             $("#partStatus").val(h.PartStatus);
@@ -556,7 +649,9 @@
             if (!h.SupplierId) { showErrorMesgGrowl("Please choose the supplier first."); return; }
             if (!h.PurchaseFrom || !h.PurchaseTo) { showErrorMesgGrowl("Please fill the purchase period first."); return; }
 
-            HMA.post(urls.candidates, { supplierId: h.SupplierId, purchaseFrom: h.PurchaseFrom, purchaseTo: h.PurchaseTo }, function (result) {
+            if (!h.DocDate) { showErrorMesgGrowl("Please fill the document date first."); return; }
+
+            HMA.post(urls.candidates, { supplierId: h.SupplierId, docDate: h.DocDate, purchaseFrom: h.PurchaseFrom, purchaseTo: h.PurchaseTo }, function (result) {
                 var existing = {};
                 $.each(lines, function (_, l) { existing[l.ItemCode] = true; });
                 var data = $.grep(result.data, function (c) { return !existing[c.ItemCode]; });
@@ -598,11 +693,16 @@
             buildDetailGrid();
             buildCandidateGrid();
             HMA.select2("#supplierId", urls.supplierLookup, "Choose supplier");
+            $("#supplierId").on("change", function () {
+                if (!filling) loadAddresses($(this).val(), null, null);
+            });
+            $("#supplierAddressId").on("change", function () { renderAddressPreview(selectedAddress()); });
 
             if (aprId > 0) {
                 load();
             } else {
                 fillDefaults();
+                loadAddresses(null);
                 applyMode({ Submit: false });
                 refreshTotals();
             }

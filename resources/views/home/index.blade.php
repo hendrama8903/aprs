@@ -8,7 +8,7 @@
 <section class="content">
     <div class="sg-welcome">
         <h2>Welcome, {{ session('FullName') }}</h2>
-        <p>{{ session('RoleName') }} &middot; {{ session('DepartmentName') ?: '-' }} &middot; {{ now()->translatedFormat('l, d F Y') }}</p>
+        <p>{{ session('RoleName') }} &middot; {{ now()->translatedFormat('l, d F Y') }}</p>
     </div>
 
     @if ($canSeeApr)
@@ -51,13 +51,13 @@
             </div>
         @endif
 
-        @if ($lastImports !== null)
+        @if ($importMenus !== [])
             <div class="dp-card hm-card">
                 <div class="hm-title"><i class="fa fa-cloud-download"></i> OGS Data</div>
-                @foreach (\App\Models\OgsImport::TypeLabels as $type => $label)
+                @foreach ($importMenus as $type => $menuUrl)
                     @php($last = $lastImports[$type])
-                    <div class="hm-item">
-                        <b>{{ $label }}</b>
+                    <a class="hm-item" href="{{ url($menuUrl) }}">
+                        <b>{{ \App\Models\OgsImport::TypeLabels[$type] }}</b>
                         <span>
                             @if ($last)
                                 last import {{ $last->CreatedDate->format('d-m-Y H:i') }} ({{ $last->CreatedDate->diffForHumans() }})
@@ -65,9 +65,8 @@
                                 <span class="text-red">never imported</span>
                             @endif
                         </span>
-                    </div>
+                    </a>
                 @endforeach
-                <a class="dp-btn dp-btn-outline" style="margin-top: 10px;" href="{{ url('/OgsImport/Index') }}"><i class="fa fa-upload"></i> Import OGS</a>
             </div>
         @endif
     </div>

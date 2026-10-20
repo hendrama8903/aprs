@@ -27,8 +27,10 @@ php artisan serve
 ### Data dummy
 
 Repository **tidak** menyimpan data OGS asli. Untuk development/demo pakai file dummy di `database/dummy/`
-(dibuat ulang dengan `php artisan apr:dummy-ogs`), lalu upload lewat menu *OGS Data → Import OGS* dengan urutan:
-item master → price master → PO transaction.
+(dibuat ulang dengan `php artisan apr:dummy-ogs`), lalu upload dengan urutan:
+item master → price master → PO transaction, masing-masing lewat tombol **Upload** di menu
+*Master Data → Item*, *Item Price*, dan *PO Transaction*.
+Setelah itu isi alamat surat dummy supplier: `php artisan db:seed --class=DummySupplierAddressSeeder`.
 
 Seeder membuat user `admin` (password di `DatabaseSeeder`, wajib diganti) dan user **dummy** untuk tiap peran
 (staff PUD, 5 approver, viewer Finance) — daftar username & password ada di docblock `database/seeders/DatabaseSeeder.php`.
@@ -41,14 +43,21 @@ Folder `docs/` (file asli dari user) di-ignore Git.
 | Menu | ADMIN | PUD_STAFF | APPROVER | VIEWER |
 |---|---|---|---|---|
 | Dashboard | ✓ | ✓ | ✓ | ✓ |
+| Price Confirmation → Set New Price | ✓ | ✓ (edit/upload) | | |
 | Price Confirmation → APR List | ✓ | ✓ (add/edit/delete draft/issue) | lihat | lihat |
 | Price Confirmation → Approval Inbox | ✓ | | ✓ | |
-| OGS Data → Import OGS | ✓ | ✓ | | |
-| OGS Data → Item / Supplier / Item Price | ✓ | ✓ (edit data surat supplier) | Item Price | |
+| Master Data → Item / Item Price | ✓ | ✓ (add/edit/delete/upload) | Item Price (lihat) | |
+| Master Data → Supplier | ✓ | ✓ (add/edit/delete, alamat surat) | | |
+| Master Data → PO Transaction | ✓ | ✓ (upload) | | |
 | Administration → User, Role, Menu, **Approval Setting** | ✓ | | | |
 
 Siapa yang approve ditentukan oleh **Approval Setting** (satu approver tetap per tahap), bukan oleh role.
 Role approver hanya perlu punya menu Approval Inbox.
+
+**Set New Price**: pilih periode harga baru → muncul semua item + supplier yang punya harga **Valid di awal periode**
+(current price). New Price & Remark diisi di grid, lewat *Adjust %* untuk baris terpilih, atau Export Excel → isi kolom
+New Price → Upload. Disimpan per item + supplier + periode (current price ikut disalin); remark wajib kalau naik di atas
+`APR_REMARK_THRESHOLD_PCT`, dan periode harga baru tidak boleh tumpang tindih untuk item + supplier yang sama.
 
 ## Konfigurasi (`config/apr.php` / `.env`)
 
@@ -64,11 +73,14 @@ Role approver hanya perlu punya menu Approval Inbox.
 
 Kolom dibaca berdasarkan **nama header** (urutan bebas):
 
-- **Item master**: ITEM CODE, ITEM NAME, UNIT, CATEGORY (+ MINUMUM ORDER, TOOL NUMBER, DRAWING NUMBER, TC FROM, TC TO, REMARK). Upsert per item code.
-- **Price master**: ITEM CODE, ITEM NAME, SUPPLIER CODE, SUPPLIER NAME, CURRENCY, PRICE, ACTIVE (+ UNIT, SUPPLIER PLANT CODE, QUOTATION, TIME CONTROL FROM/TO, INPUT/UPDATE BY/DATE). **Mengganti seluruh** data harga.
+- **Item master**: ITEM CODE, ITEM NAME, UNIT, CATEGORY (+ TOOL NUMBER, DRAWING NUMBER, TC FROM, TC TO, REMARK). Upsert per item code.
+- **Price master**: ITEM CODE, ITEM NAME, SUPPLIER CODE, SUPPLIER NAME, CURRENCY, PRICE, TIME CONTROL FROM/TO (+ UNIT, SUPPLIER PLANT CODE, QUOTATION, INPUT/UPDATE BY/DATE). **Mengganti seluruh** data harga
+  (dibatalkan kalau tidak ada satu pun baris valid). Tidak ada kolom ACTIVE: **current price** di APR = harga yang Time Control-nya
+  mencakup tanggal dokumen; kalau tidak ada, harga terakhir yang sudah lewat dipakai dan ditandai *expired*.
+  Baris dilewati kalau supplier code kosong, price bukan angka / ≤ 0, currency selain IDR/USD/JPY, atau Time Control kosong / From > To.
 - **PO transaction** *(format usulan, sesuaikan saat export OGS asli tersedia)*: PO NO, PO LINE, PO DATE, ITEM CODE, SUPPLIER CODE, SUPPLIER NAME, CURRENCY, QTY, UNIT PRICE. Upsert per PO NO + PO LINE.
 
-Temuan kualitas data (item tanpa nama, plant code tidak seragam, harga aktif ganda, dll.) dicatat sebagai warning di riwayat import.
+Temuan kualitas data (item tanpa nama, plant code tidak seragam, periode Time Control tumpang tindih, harga yang tidak berlaku hari ini, dll.) dicatat sebagai warning di riwayat import.
 
 ## Struktur kode
 

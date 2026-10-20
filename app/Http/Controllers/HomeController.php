@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Apr;
+use App\Models\OgsImport;
 use App\Repositories\AprRepo;
 use App\Repositories\OgsImportRepo;
 use App\Support\SessionAuth;
@@ -26,7 +27,13 @@ class HomeController extends Controller
             'statusCounts' => $statusCounts,
             'inbox' => SessionAuth::hasMenu('/Approval/Index') ? $this->aprRepo->inbox((int) $this->loginUserId()) : null,
             'recent' => $canSeeApr ? array_slice($this->aprRepo->search(null, null, null, null), 0, 8) : [],
-            'lastImports' => SessionAuth::hasMenu('/OgsImport/Index') ? $this->ogsImportRepo->lastImports() : null,
+            'lastImports' => $this->ogsImportRepo->lastImports(),
+            // Menu tempat upload tiap jenis data OGS; hanya yang bisa dibuka user yang ditampilkan.
+            'importMenus' => array_filter([
+                OgsImport::TypeItem => '/Item/Index',
+                OgsImport::TypePrice => '/ItemPrice/Index',
+                OgsImport::TypePo => '/PoTransaction/Index',
+            ], fn (string $url) => SessionAuth::hasMenu($url)),
         ]);
     }
 }

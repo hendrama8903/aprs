@@ -1,7 +1,7 @@
 <div class="box-header dp-toolbar">
     <div class="dp-toolbar-left">
         @if ($add)
-            <button type="button" class="dp-btn dp-btn-primary" id="btn_add"><i class="fa fa-plus"></i> Add Department</button>
+            <button type="button" class="dp-btn dp-btn-primary" id="btn_add"><i class="fa fa-plus"></i> Add Supplier</button>
         @endif
         @if ($edit)
             <button type="button" class="dp-btn dp-btn-outline" id="btn_edit" disabled><i class="fa fa-pencil-square-o"></i> Edit</button>

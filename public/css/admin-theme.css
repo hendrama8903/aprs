@@ -190,6 +190,8 @@ body.adm-body {
     color: var(--ink);
     outline: none;
     transition: border-color .15s ease, box-shadow .15s ease;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .adm-menu-search input::placeholder { color: #A7AEC0; }

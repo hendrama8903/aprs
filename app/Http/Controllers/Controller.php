@@ -30,7 +30,7 @@ abstract class Controller
         return SessionAuth::hasPermission($permissionCode);
     }
 
-    /** Set izin Add/Edit/Delete untuk tombol toolbar, mis. prefix "DEPARTMENT". */
+    /** Set izin Add/Edit/Delete untuk tombol toolbar, mis. prefix "ITEM". */
     protected function crudPermissions(string $prefix): array
     {
         return [
@@ -142,6 +142,9 @@ abstract class Controller
                 $cell = $sheet->getCell([$col + 2, $rowIndex]);
                 if ($value instanceof \DateTimeInterface) {
                     $cell->setValue($value->format('d-m-Y H:i'));
+                } elseif (is_string($value) && preg_match('/^0\d+$/', $value)) {
+                    // Kode berawalan nol (mis. supplier 0147) tetap teks, supaya bisa di-upload balik apa adanya.
+                    $cell->setValueExplicit($value, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
                 } else {
                     $cell->setValue($value);
                 }

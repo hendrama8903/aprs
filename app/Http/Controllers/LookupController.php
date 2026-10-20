@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Repositories\DepartmentRepo;
+use App\Repositories\ItemRepo;
 use App\Repositories\RoleRepo;
 use App\Repositories\SupplierRepo;
 use App\Repositories\UserRepo;
@@ -17,18 +17,18 @@ use Illuminate\Http\JsonResponse;
 class LookupController extends Controller
 {
     public function __construct(
-        private DepartmentRepo $departmentRepo,
+        private ItemRepo $itemRepo,
         private RoleRepo $roleRepo,
         private SupplierRepo $supplierRepo,
         private UserRepo $userRepo,
     ) {
     }
 
-    public function department(Request $request): JsonResponse
+    public function item(Request $request): JsonResponse
     {
         return $this->lookup($request, fn () => array_map(
-            static fn ($d) => ['id' => (string) $d->DepartmentId, 'text' => $d->DepartmentCode . ' - ' . $d->DepartmentName],
-            $this->departmentRepo->search($request->input('q'), true),
+            static fn ($i) => ['id' => (string) $i->ItemId, 'text' => $i->ItemCode . ' - ' . $i->ItemName],
+            $this->itemRepo->search($request->input('q'), null),
         ));
     }
 
@@ -38,6 +38,12 @@ class LookupController extends Controller
             static fn ($s) => ['id' => (string) $s->SupplierId, 'text' => $s->SupplierCode . ' - ' . $s->SupplierName],
             $this->supplierRepo->search($request->input('q'), true),
         ));
+    }
+
+    /** Alamat surat aktif satu supplier (default pertama) untuk dropdown di form APR; bukan format Select2. */
+    public function supplierAddress(Request $request): JsonResponse
+    {
+        return $this->jsonData(fn () => $this->supplierRepo->activeAddresses((int) $request->input('supplierId')));
     }
 
     public function role(Request $request): JsonResponse
@@ -52,7 +58,7 @@ class LookupController extends Controller
     {
         return $this->lookup($request, fn () => array_map(
             static fn ($u) => ['id' => (string) $u->UserId, 'text' => $u->FullName . ' (' . $u->Username . ')'],
-            $this->userRepo->search($request->input('q'), null, null, true),
+            $this->userRepo->search($request->input('q'), null, true),
         ));
     }
 

@@ -77,6 +77,7 @@ class AprController extends Controller
     {
         return $this->jsonData(fn () => $this->aprRepo->candidateItems(
             (int) $request->input('supplierId'),
+            (string) ($request->input('docDate') ?: now()->toDateString()),
             (string) $request->input('purchaseFrom'),
             (string) $request->input('purchaseTo'),
         ));

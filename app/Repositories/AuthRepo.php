@@ -16,7 +16,7 @@ class AuthRepo
 {
     public function getUserByUsername(string $username): ?object
     {
-        $user = UserAccount::query()->with(['role', 'department'])->where('username', $username)->first();
+        $user = UserAccount::query()->with('role')->where('username', $username)->first();
         if ($user === null) {
             return null;
         }
@@ -26,9 +26,6 @@ class AuthRepo
             'Username' => $user->username,
             'FullName' => $user->full_name,
             'Email' => $user->email,
-            'DepartmentId' => $user->department_id,
-            'DepartmentCode' => $user->department?->department_code,
-            'DepartmentName' => $user->department?->department_name,
             'RoleId' => $user->role_id,
             'RoleCode' => $user->role->role_code,
             'RoleName' => $user->role->role_name,

@@ -16,6 +16,8 @@ class AprDetail extends Model
     protected $casts = [
         'qty' => 'float',
         'current_price' => 'float',
+        'price_tc_from' => 'date',
+        'price_tc_to' => 'date',
         'new_price' => 'float',
         'po_avg_price' => 'float',
         'po_min_price' => 'float',

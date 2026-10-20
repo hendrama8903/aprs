@@ -24,7 +24,6 @@
                 { dataField: "Username", caption: "Username", fixed: true, fixedPosition: "left" },
                 { dataField: "FullName", caption: "Full Name" },
                 { dataField: "EmployeeNo", caption: "Employee No" },
-                { dataField: "DepartmentName", caption: "Department" },
                 { dataField: "RoleName", caption: "Role" },
                 { dataField: "SupervisorName", caption: "Supervisor" },
                 {

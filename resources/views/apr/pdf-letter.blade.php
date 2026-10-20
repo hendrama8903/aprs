@@ -2,6 +2,7 @@
 @php
     $a = $d->Apr;
     $s = $a->supplier;
+    // Alamat & attention diambil dari snapshot di dokumen (letter_*), bukan master supplier saat ini.
     $price = fn ($v, $cur) => number_format((float) $v, $cur === 'IDR' ? 0 : 2, '.', ',');
     $director = collect($d->Signatures)->firstWhere('StepName', 'Director');
     $conditions = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string) $a->letter_conditions))));
@@ -56,9 +57,9 @@
 <div>No. {{ $a->ext_doc_no }}</div>
 
 <table class="meta" style="margin-top: 14px;">
-    <tr><td>To</td><td>:</td><td><b>{{ $s->supplier_name }}</b>@if ($s->address)<br>{!! nl2br(e($s->address)) !!}@endif</td></tr>
-    @if ($s->attention_name)
-        <tr><td>Attn.</td><td>:</td><td>{{ $s->attention_name }}@if ($s->attention_title)<br>{{ $s->attention_title }}@endif</td></tr>
+    <tr><td>To</td><td>:</td><td><b>{{ $s->supplier_name }}</b>@if ($a->letter_address)<br>{!! nl2br(e($a->letter_address)) !!}@endif</td></tr>
+    @if ($a->letter_attention_name)
+        <tr><td>Attn.</td><td>:</td><td>{{ $a->letter_attention_name }}@if ($a->letter_attention_title)<br>{{ $a->letter_attention_title }}@endif</td></tr>
     @endif
 </table>
 
@@ -85,7 +86,7 @@
     </tr>
     <tr>
         <td><u>{{ $director?->Name ?? '..............................' }}</u><br>Director</td>
-        <td><u>{{ $s->attention_name ?? '..............................' }}</u><br>{{ $s->attention_title ?? $s->supplier_name }}</td>
+        <td><u>{{ $a->letter_attention_name ?? '..............................' }}</u><br>{{ $a->letter_attention_title ?? $s->supplier_name }}</td>
     </tr>
 </table>
 

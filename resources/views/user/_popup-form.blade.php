@@ -85,19 +85,6 @@
 
                 <div class="dpf-row">
                     <div class="dpf-row-left">
-                        <div class="dpf-icon"><i class="fa fa-building"></i></div>
-                        <div>
-                            <div class="dpf-label">Department</div>
-                            <div class="dpf-sub">User's department</div>
-                        </div>
-                    </div>
-                    <div class="dpf-row-right">
-                        <select class="form-control" id="addEditDepartment"></select>
-                    </div>
-                </div>
-
-                <div class="dpf-row">
-                    <div class="dpf-row-left">
                         <div class="dpf-icon"><i class="fa fa-user-circle-o"></i></div>
                         <div>
                             <div class="dpf-label">Direct Supervisor</div>

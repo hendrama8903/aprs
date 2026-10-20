@@ -19,11 +19,6 @@ class UserAccount extends Model
         'last_login_at' => 'datetime',
     ];
 
-    public function department(): BelongsTo
-    {
-        return $this->belongsTo(Department::class, 'department_id', 'department_id');
-    }
-
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class, 'role_id', 'role_id');

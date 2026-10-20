@@ -218,9 +218,9 @@ var HMA = (function ($) {
     // ---------- Halaman CRUD standar ----------
     // Menghubungkan toolbar (#btn_add/#btn_edit/#btn_delete/#btn_refresh/#btn_export),
     // grid (#datagrid) dan popup (#modalAddEdit, #modal-title, #modal-subtitle, #btn_save).
-    //   cfg.entity      : label, mis. "Department"
-    //   cfg.key         : field primary key, mis. "DepartmentId"
-    //   cfg.keyParam    : nama parameter GetByKey, mis. "departmentId"
+    //   cfg.entity      : label, mis. "Item"
+    //   cfg.key         : field primary key, mis. "ItemId"
+    //   cfg.keyParam    : nama parameter GetByKey, mis. "itemId"
     //   cfg.urls        : { search, getByKey, save, remove, exportExcel }
     //   cfg.canEdit     : hak edit (double-click baris membuka Edit)
     //   cfg.columns     : kolom data (kolom No & audit ditambahkan otomatis)

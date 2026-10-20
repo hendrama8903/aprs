@@ -29,7 +29,6 @@ class UserController extends Controller
         try {
             $data = $this->userRepo->search(
                 $request->input('keyword'),
-                $request->filled('departmentId') ? (int) $request->input('departmentId') : null,
                 $request->filled('roleId') ? (int) $request->input('roleId') : null,
                 $request->input('isActive') === null || $request->input('isActive') === '' ? null : $request->boolean('isActive'),
             );
@@ -88,7 +87,6 @@ class UserController extends Controller
                 'Email' => $request->input('Email'),
                 'Phone' => $request->input('Phone'),
                 'EmployeeNo' => $request->input('EmployeeNo'),
-                'DepartmentId' => $request->filled('DepartmentId') ? (int) $request->input('DepartmentId') : null,
                 'RoleId' => (int) $request->input('RoleId'),
                 'SupervisorUserId' => $request->filled('SupervisorUserId') ? (int) $request->input('SupervisorUserId') : null,
                 'IsAdUser' => $isAdUser,
@@ -139,10 +137,10 @@ class UserController extends Controller
         return $this->exportExcel(
             'User',
             'USER',
-            ['Username', 'Full Name', 'Employee No', 'Email', 'Phone', 'Department', 'Role', 'Login Type', 'Status', 'Last Login'],
-            $this->userRepo->search(null, null, null, null),
+            ['Username', 'Full Name', 'Employee No', 'Email', 'Phone', 'Role', 'Login Type', 'Status', 'Last Login'],
+            $this->userRepo->search(null, null, null),
             fn (object $u) => [
-                $u->Username, $u->FullName, $u->EmployeeNo, $u->Email, $u->Phone, $u->DepartmentName, $u->RoleName,
+                $u->Username, $u->FullName, $u->EmployeeNo, $u->Email, $u->Phone, $u->RoleName,
                 $u->IsAdUser ? 'Active Directory' : 'Local', $u->IsActive ? 'Active' : 'Inactive', $u->LastLoginDate,
             ],
         );

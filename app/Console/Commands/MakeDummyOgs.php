@@ -14,7 +14,8 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
  * pernah masuk repository/database dev. Hasil selalu sama (seed tetap).
  *
  * Sengaja menyisipkan beberapa cacat data seperti di OGS asli (item tanpa nama, plant code tidak
- * seragam, harga aktif ganda, tanggal berisi jam) supaya warning import ikut teruji.
+ * seragam, periode harga tumpang tindih, tanggal berisi jam) supaya warning import ikut teruji.
+ * Price master tidak punya kolom ACTIVE (sama dengan export OGS): harga berlaku ditentukan dari Time Control.
  */
 class MakeDummyOgs extends Command
 {
@@ -64,7 +65,7 @@ class MakeDummyOgs extends Command
     ];
 
     private const ItemHeader = ['ACTION', 'NO.', 'ITEM CODE', 'ITEM NAME', 'UNIT', 'CATEGORY', 'MINUMUM ORDER', 'TOOL NUMBER', 'DRAWING NUMBER', 'TC FROM', 'TC TO', 'REMARK'];
-    private const PriceHeader = ['ACTION', 'NO.', 'ITEM CODE', 'ITEM NAME', 'UNIT', 'SUPPLIER PLANT CODE', 'SUPPLIER CODE', 'SUPPLIER NAME', 'CURRENCY', 'PRICE', 'QUOTATION', 'TIME CONTROL FROM', 'TIME CONTROL TO', 'INPUT BY', 'INPUT DATE', 'UPDATE BY', 'UPDATE DATE', 'ACTIVE'];
+    private const PriceHeader = ['ACTION', 'NO.', 'ITEM CODE', 'ITEM NAME', 'UNIT', 'SUPPLIER PLANT CODE', 'SUPPLIER CODE', 'SUPPLIER NAME', 'CURRENCY', 'PRICE', 'QUOTATION', 'TIME CONTROL FROM', 'TIME CONTROL TO', 'INPUT BY', 'INPUT DATE', 'UPDATE BY', 'UPDATE DATE'];
     private const PoHeader = ['PO NO', 'PO LINE', 'PO DATE', 'ITEM CODE', 'ITEM NAME', 'UNIT', 'SUPPLIER CODE', 'SUPPLIER NAME', 'CURRENCY', 'QTY', 'UNIT PRICE'];
 
     private const Rates = ['IDR' => 1, 'USD' => 16500, 'JPY' => 110];
@@ -142,18 +143,23 @@ class MakeDummyOgs extends Command
                 $previous = $this->convert($item['base'] * (0.90 + mt_rand(0, 6) / 100), $currency);
                 $plant = $this->plantCode();
 
-                // Harga lama (tidak aktif) periode Apr-Sep 2025.
-                $rows[] = $this->priceRow($code, $item, $plant, $supCode, $supName, $currency, $previous, 'APR-SEP25',
-                    '2025-04-01', '2025-09-30', $users[mt_rand(0, 2)], '2025-03-20 09:15', false);
-                // Harga current (aktif) periode Okt 2025-Mar 2026.
-                $rows[] = $this->priceRow($code, $item, $plant, $supCode, $supName, $currency, $current, 'PC OCT-MAR26',
-                    '2025-10-01', '2026-03-31', $users[mt_rand(0, 2)], '2025-09-25 10:30', true);
+                // Harga lama periode Okt 2025-Mar 2026 (sudah lewat).
+                $rows[] = $this->priceRow($code, $item, $plant, $supCode, $supName, $currency, $previous, 'PC OCT-MAR26',
+                    '2025-10-01', '2026-03-31', $users[mt_rand(0, 2)], '2025-09-20 09:15');
+                // Harga current periode Apr 2026-Mar 2027. Sebagian pasangan sengaja tidak diperpanjang di OGS
+                // (hanya punya harga lama) supaya tanda "expired" di APR ikut teruji.
+                $renewed = mt_rand(1, 100) > 12;
+                if ($renewed) {
+                    $rows[] = $this->priceRow($code, $item, $plant, $supCode, $supName, $currency, $current, 'PC APR26-MAR27',
+                        '2026-04-01', '2027-03-31', $users[mt_rand(0, 2)], '2026-03-25 10:30');
+                }
 
-                $pairs[] = ['code' => $code, 'supplier' => [$supCode, $supName, $currency], 'price' => $current, 'previous' => $previous];
+                $pairs[] = ['code' => $code, 'supplier' => [$supCode, $supName, $currency], 'price' => $renewed ? $current : $previous, 'previous' => $previous];
             }
         }
 
-        // Cacat data: satu pasangan item/supplier punya dua harga aktif, dan satu tanggal hanya berisi jam.
+        // Cacat data: satu pasangan item/supplier punya dua harga dengan periode sama (tumpang tindih),
+        // dan satu tanggal Time Control hanya berisi jam (baris itu dilewati saat import).
         $dup = $rows[3];
         $dup[9] = round($dup[9] * 1.02, 2);
         $rows[] = $dup;
@@ -180,9 +186,9 @@ class MakeDummyOgs extends Command
                     continue;
                 }
                 $date = $month->copy()->day(mt_rand(1, 28));
-                // Harga PO mengikuti periode harga: sebelum Okt 2025 pakai harga lama, sesudahnya harga current,
+                // Harga PO mengikuti periode harga: sebelum Apr 2026 pakai harga lama, sesudahnya harga current,
                 // dengan sedikit variasi (diskon/negosiasi per PO).
-                $base = $date->lt(Carbon::parse('2025-10-01')) ? $pair['previous'] : $pair['price'];
+                $base = $date->lt(Carbon::parse('2026-04-01')) ? $pair['previous'] : $pair['price'];
                 $price = $currency === 'IDR' ? round($base * (0.98 + mt_rand(0, 4) / 100), -1) : round($base * (0.98 + mt_rand(0, 4) / 100), 2);
                 $qty = mt_rand($item['qty'][0], $item['qty'][1]);
 
@@ -213,11 +219,10 @@ class MakeDummyOgs extends Command
     }
 
     private function priceRow(string $code, array $item, string $plant, string $supCode, string $supName, string $currency, float $price,
-        string $quotation, string $from, string $to, string $user, string $inputDate, bool $active): array
+        string $quotation, string $from, string $to, string $user, string $inputDate): array
     {
         return [null, null, $code, $item['name'], $item['unit'], $plant, $supCode, $supName, $currency, $price, $quotation,
-            $this->excelDate($from), $this->excelDate($to), $user, $this->excelDate($inputDate), $user, $this->excelDate($inputDate),
-            $active ? 'TRUE' : 'FALSE'];
+            $this->excelDate($from), $this->excelDate($to), $user, $this->excelDate($inputDate), $user, $this->excelDate($inputDate)];
     }
 
     private function convert(float $idr, string $currency): float

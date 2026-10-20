@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\ApprovalStep;
-use App\Models\Department;
 use App\Models\Menu;
 use App\Models\Permission;
 use App\Models\Role;
@@ -12,7 +11,7 @@ use App\Support\PasswordHasher;
 use Illuminate\Database\Seeder;
 
 /**
- * Data awal APR: role, menu, permission, department, user, dan urutan approval.
+ * Data awal APR: role, menu, permission, user, dan urutan approval.
  * Setiap menu baru: tambahkan menu + permission di sini.
  *
  * Login awal: admin / Admin@123 (WAJIB diganti setelah login pertama).
@@ -57,17 +56,16 @@ class DatabaseSeeder extends Seeder
         $dashboard = $menu('/Home/Index', null, 'Dashboard', 'fa-dashboard', 10);
 
         $priceConfirmation = $group('Price Confirmation', 'fa-check-square-o', 20);
+        $newPriceMenu = $menu('/NewPrice/Index', $priceConfirmation, 'Set New Price', 'fa-pencil-square-o', 5);
         $aprList = $menu('/Apr/Index', $priceConfirmation, 'APR List', 'fa-file-text-o', 10);
         $approvalInbox = $menu('/Approval/Index', $priceConfirmation, 'Approval Inbox', 'fa-inbox', 20);
 
-        $ogsData = $group('OGS Data', 'fa-cloud-download', 30);
-        $ogsImport = $menu('/OgsImport/Index', $ogsData, 'Import OGS', 'fa-upload', 10);
-        $itemMenu = $menu('/Item/Index', $ogsData, 'Item', 'fa-cube', 20);
-        $supplierMenu = $menu('/Supplier/Index', $ogsData, 'Supplier', 'fa-truck', 30);
-        $itemPriceMenu = $menu('/ItemPrice/Index', $ogsData, 'Item Price', 'fa-tags', 40);
-
-        $masterData = $group('Master Data', 'fa-database', 40);
-        $department = $menu('/Department/Index', $masterData, 'Department', 'fa-building', 10);
+        // Data dari OGS (bisa juga diinput manual). Upload file export OGS ada di menu masing-masing.
+        $masterData = $group('Master Data', 'fa-database', 30);
+        $itemMenu = $menu('/Item/Index', $masterData, 'Item', 'fa-cube', 20);
+        $supplierMenu = $menu('/Supplier/Index', $masterData, 'Supplier', 'fa-truck', 30);
+        $itemPriceMenu = $menu('/ItemPrice/Index', $masterData, 'Item Price', 'fa-tags', 40);
+        $poMenu = $menu('/PoTransaction/Index', $masterData, 'PO Transaction', 'fa-shopping-cart', 50);
 
         $administration = $group('Administration', 'fa-cogs', 90);
         $user = $menu('/User/Index', $administration, 'User', 'fa-user', 10);
@@ -77,15 +75,23 @@ class DatabaseSeeder extends Seeder
 
         // ---------- Permission ----------
         $permissions = [
+            [$newPriceMenu, 'NEWPRICE-EDIT', 'Edit'],
             [$aprList, 'APR-ADD', 'Add'],
             [$aprList, 'APR-EDIT', 'Edit & Submit'],
             [$aprList, 'APR-DELETE', 'Delete Draft'],
             [$aprList, 'APR-ISSUE', 'Issue Letter'],
-            [$ogsImport, 'OGSIMPORT-UPLOAD', 'Upload'],
+            [$itemMenu, 'ITEM-ADD', 'Add'],
+            [$itemMenu, 'ITEM-EDIT', 'Edit'],
+            [$itemMenu, 'ITEM-DELETE', 'Delete'],
+            [$itemMenu, 'ITEM-UPLOAD', 'Upload'],
+            [$itemPriceMenu, 'ITEMPRICE-ADD', 'Add'],
+            [$itemPriceMenu, 'ITEMPRICE-EDIT', 'Edit'],
+            [$itemPriceMenu, 'ITEMPRICE-DELETE', 'Delete'],
+            [$itemPriceMenu, 'ITEMPRICE-UPLOAD', 'Upload'],
+            [$poMenu, 'POTRANSACTION-UPLOAD', 'Upload'],
+            [$supplierMenu, 'SUPPLIER-ADD', 'Add'],
             [$supplierMenu, 'SUPPLIER-EDIT', 'Edit'],
-            [$department, 'DEPARTMENT-ADD', 'Add'],
-            [$department, 'DEPARTMENT-EDIT', 'Edit'],
-            [$department, 'DEPARTMENT-DELETE', 'Delete'],
+            [$supplierMenu, 'SUPPLIER-DELETE', 'Delete'],
             [$user, 'USER-ADD', 'Add'],
             [$user, 'USER-EDIT', 'Edit'],
             [$user, 'USER-DELETE', 'Delete'],
@@ -116,30 +122,18 @@ class DatabaseSeeder extends Seeder
 
         $grant($roles['ADMIN'], Menu::query()->pluck('menu_id')->all(), array_keys($permissionIds));
         $grant($roles['PUD_STAFF'], [
-            $dashboard->menu_id, $priceConfirmation->menu_id, $aprList->menu_id,
-            $ogsData->menu_id, $ogsImport->menu_id, $itemMenu->menu_id, $supplierMenu->menu_id, $itemPriceMenu->menu_id,
-        ], ['APR-ADD', 'APR-EDIT', 'APR-DELETE', 'APR-ISSUE', 'OGSIMPORT-UPLOAD', 'SUPPLIER-EDIT']);
+            $dashboard->menu_id, $priceConfirmation->menu_id, $newPriceMenu->menu_id, $aprList->menu_id,
+            $masterData->menu_id, $itemMenu->menu_id, $supplierMenu->menu_id, $itemPriceMenu->menu_id, $poMenu->menu_id,
+        ], ['NEWPRICE-EDIT', 'APR-ADD', 'APR-EDIT', 'APR-DELETE', 'APR-ISSUE', 'SUPPLIER-ADD', 'SUPPLIER-EDIT', 'SUPPLIER-DELETE', 'ITEM-ADD', 'ITEM-EDIT', 'ITEM-DELETE', 'ITEM-UPLOAD', 'ITEMPRICE-ADD', 'ITEMPRICE-EDIT', 'ITEMPRICE-DELETE', 'ITEMPRICE-UPLOAD', 'POTRANSACTION-UPLOAD']);
         $grant($roles['APPROVER'], [
             $dashboard->menu_id, $priceConfirmation->menu_id, $aprList->menu_id, $approvalInbox->menu_id,
-            $ogsData->menu_id, $itemPriceMenu->menu_id,
+            $masterData->menu_id, $itemPriceMenu->menu_id,
         ], []);
         $grant($roles['VIEWER'], [$dashboard->menu_id, $priceConfirmation->menu_id, $aprList->menu_id], []);
-
-        // ---------- Department ----------
-        foreach ([
-            ['PUD', 'Purchasing'],
-            ['FIN', 'Finance & Accounting'],
-            ['MGT', 'Management'],
-            ['IT', 'Information Technology'],
-        ] as [$code, $name]) {
-            Department::firstOrCreate(['department_code' => $code], ['department_name' => $name, 'created_by' => $by]);
-        }
-        $dept = Department::query()->pluck('department_id', 'department_code');
 
         // ---------- User ----------
         UserAccount::firstOrCreate(['username' => 'admin'], [
             'full_name' => 'System Administrator',
-            'department_id' => $dept['IT'],
             'role_id' => $roles['ADMIN']->role_id,
             'is_ad_user' => false,
             'password_hash' => PasswordHasher::hash('Admin@123'),
@@ -148,17 +142,16 @@ class DatabaseSeeder extends Seeder
 
         $users = [];
         foreach ([
-            ['pud.staff', 'Dummy Staff PUD', 'PUD', 'PUD_STAFF'],
-            ['pud.dh', 'Dummy Department Head', 'PUD', 'APPROVER'],
-            ['pud.adv', 'Dummy Advisor', 'PUD', 'APPROVER'],
-            ['pud.sadv', 'Dummy Senior Advisor', 'PUD', 'APPROVER'],
-            ['pud.div', 'Dummy Division Head', 'MGT', 'APPROVER'],
-            ['director', 'Dummy Director', 'MGT', 'APPROVER'],
-            ['fa.viewer', 'Dummy Finance Viewer', 'FIN', 'VIEWER'],
-        ] as [$username, $fullName, $deptCode, $roleCode]) {
+            ['pud.staff', 'Dummy Staff PUD', 'PUD_STAFF'],
+            ['pud.dh', 'Dummy Department Head', 'APPROVER'],
+            ['pud.adv', 'Dummy Advisor', 'APPROVER'],
+            ['pud.sadv', 'Dummy Senior Advisor', 'APPROVER'],
+            ['pud.div', 'Dummy Division Head', 'APPROVER'],
+            ['director', 'Dummy Director', 'APPROVER'],
+            ['fa.viewer', 'Dummy Finance Viewer', 'VIEWER'],
+        ] as [$username, $fullName, $roleCode]) {
             $users[$username] = UserAccount::firstOrCreate(['username' => $username], [
                 'full_name' => $fullName,
-                'department_id' => $dept[$deptCode],
                 'role_id' => $roles[$roleCode]->role_id,
                 'is_ad_user' => false,
                 'password_hash' => PasswordHasher::hash(self::DummyPassword),

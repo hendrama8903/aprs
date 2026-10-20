@@ -18,6 +18,11 @@ class PoTransaction extends Model
         'amount' => 'float',
     ];
 
+    public function item(): BelongsTo
+    {
+        return $this->belongsTo(Item::class, 'item_id', 'item_id');
+    }
+
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class, 'supplier_id', 'supplier_id');

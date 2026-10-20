@@ -9,6 +9,7 @@ use App\Models\AprDetail;
 use App\Models\ItemPrice;
 use App\Models\Notification;
 use App\Models\Supplier;
+use App\Models\SupplierAddress;
 use App\Models\UserAccount;
 use App\Support\DBResult;
 use App\Support\DocNumber;
@@ -161,13 +162,14 @@ class AprRepo
     }
 
     /**
-     * Item yang bisa ditambahkan: harga aktif supplier di price master + qty & statistik PO pada periode pembelian.
+     * Item yang bisa ditambahkan: current price supplier pada tanggal dokumen (lihat currentPrices)
+     * + qty & statistik PO pada periode pembelian.
      *
      * @return object[]
      */
-    public function candidateItems(int $supplierId, string $purchaseFrom, string $purchaseTo): array
+    public function candidateItems(int $supplierId, string $docDate, string $purchaseFrom, string $purchaseTo): array
     {
-        $prices = $this->activePrices($supplierId);
+        $prices = $this->currentPrices($supplierId, $docDate);
         $stats = $this->poStats($supplierId, array_keys($prices), $purchaseFrom, $purchaseTo);
 
         return array_values(array_map(fn (ItemPrice $p) => (object) [
@@ -177,6 +179,9 @@ class AprRepo
             'Currency' => $p->currency,
             'CurrentPrice' => $p->price,
             'Quotation' => $p->quotation,
+            'PriceTcFrom' => $p->tc_from->toDateString(),
+            'PriceTcTo' => $p->tc_to->toDateString(),
+            'PriceStatus' => $p->price_status,
             'Qty' => $stats[$p->item_code]->qty ?? 0,
             'PoCount' => $stats[$p->item_code]->po_count ?? 0,
             'PoAvgPrice' => $stats[$p->item_code]->avg_price ?? null,
@@ -208,13 +213,13 @@ class AprRepo
             return new DBResult(false, $header);
         }
 
-        $prices = $this->activePrices($header['supplier_id']);
+        $prices = $this->currentPrices($header['supplier_id'], $header['doc_date']);
         $codes = [];
         foreach ($lines as $i => $line) {
             $code = trim((string) ($line['ItemCode'] ?? ''));
             $no = $i + 1;
             if (!isset($prices[$code])) {
-                return new DBResult(false, "Line {$no}: item {$code} has no active price for this supplier in the price master.");
+                return new DBResult(false, "Line {$no}: item {$code} has no price for this supplier in the price master.");
             }
             if (isset($codes[$code])) {
                 return new DBResult(false, "Line {$no}: item {$code} is listed more than once.");
@@ -254,6 +259,9 @@ class AprRepo
                     'currency' => $price->currency,
                     'qty' => $s->qty ?? 0,
                     'current_price' => $price->price,
+                    'price_tc_from' => $price->tc_from->toDateString(),
+                    'price_tc_to' => $price->tc_to->toDateString(),
+                    'price_quotation' => $price->quotation,
                     'new_price' => (float) $line['NewPrice'],
                     'remark' => $this->nullable($line['Remark'] ?? null, 255),
                     'po_count' => $s->po_count ?? 0,
@@ -302,6 +310,9 @@ class AprRepo
 
             $threshold = (float) config('apr.remark_threshold_pct');
             $errors = [];
+            if ($apr->letter_address === null) {
+                $errors[] = 'Please choose the letter address. If the supplier has none, add one in the Supplier menu first.';
+            }
             foreach ($apr->details as $d) {
                 $line = $this->mapDetail($apr, $d);
                 if ($line->NeedRemark && trim((string) $d->remark) === '') {
@@ -441,21 +452,32 @@ class AprRepo
 
     // ---------- Helper ----------
 
-    /** @return array<string,ItemPrice> item_code -> harga aktif terbaru supplier */
-    private function activePrices(int $supplierId): array
+    /**
+     * Current price per item untuk supplier pada tanggal acuan (tanggal dokumen APR), dari Time Control:
+     * 1. harga yang berlaku di tanggal itu (kalau tumpang tindih: TC From paling baru, lalu update OGS paling baru);
+     * 2. kalau tidak ada: harga terakhir yang sudah lewat (Expired) - justru yang biasanya diperbarui lewat APR;
+     * 3. kalau hanya ada harga yang belum mulai: yang paling dekat (Not yet valid).
+     *
+     * @return array<string,ItemPrice> item_code -> harga; atribut price_status berisi ItemPrice::Status*
+     */
+    private function currentPrices(int $supplierId, string $date): array
     {
+        $ref = Carbon::parse($date)->startOfDay();
+        $rank = fn (ItemPrice $p) => match ($p->price_status) {
+            ItemPrice::StatusValid => [0, -$p->tc_from->timestamp, -($p->ogs_update_date?->timestamp ?? 0), -$p->item_price_id],
+            ItemPrice::StatusExpired => [1, -$p->tc_to->timestamp, -$p->tc_from->timestamp, -$p->item_price_id],
+            default => [2, $p->tc_from->timestamp, 0, -$p->item_price_id],
+        };
+
         $result = [];
-        // Kalau ada harga aktif ganda (cacat data OGS), pakai yang paling baru di-update.
-        $prices = ItemPrice::query()
-            ->where('supplier_id', $supplierId)
-            ->where('is_active', true)
-            ->orderBy('item_code')
-            ->orderByDesc('ogs_update_date')
-            ->orderByDesc('item_price_id')
-            ->get();
-        foreach ($prices as $p) {
-            $result[$p->item_code] ??= $p;
+        foreach (ItemPrice::query()->where('supplier_id', $supplierId)->whereNotNull('tc_from')->whereNotNull('tc_to')->get() as $p) {
+            $p->price_status = ItemPrice::statusOn($p->tc_from, $p->tc_to, $ref);
+            $best = $result[$p->item_code] ?? null;
+            if ($best === null || $rank($p) < $rank($best)) {
+                $result[$p->item_code] = $p;
+            }
         }
+        ksort($result);
 
         return $result;
     }
@@ -558,8 +580,26 @@ class AprRepo
 
         $conclusion = ($data['Conclusion'] ?? 'ACCEPTABLE') === 'NOT_ACCEPTABLE' ? 'NOT_ACCEPTABLE' : 'ACCEPTABLE';
 
+        // Alamat surat: snapshot dari master setiap kali disimpan (selama dokumen masih bisa diedit),
+        // jadi yang dilihat approver = yang tercetak di surat. Wajib saat submit, boleh kosong di draft.
+        $addressId = (int) ($data['SupplierAddressId'] ?? 0);
+        $address = null;
+        if ($addressId !== 0) {
+            $address = SupplierAddress::query()
+                ->where('address_id', $addressId)->where('supplier_id', $supplierId)->where('is_active', true)
+                ->first();
+            if ($address === null) {
+                return 'The selected letter address is not available for this supplier anymore. Please choose another one.';
+            }
+        }
+
         return [
             'supplier_id' => $supplierId,
+            'supplier_address_id' => $address?->address_id,
+            'letter_address_label' => $address?->label,
+            'letter_address' => $address?->address,
+            'letter_attention_name' => $address?->attention_name,
+            'letter_attention_title' => $address?->attention_title,
             'doc_date' => $dates['DocDate']->toDateString(),
             'part_category' => mb_substr(trim((string) $data['PartCategory']), 0, 50),
             'part_status' => mb_substr(trim((string) $data['PartStatus']), 0, 50),
@@ -678,6 +718,11 @@ class AprRepo
             'SupplierId' => $a->supplier_id,
             'SupplierCode' => $a->supplier->supplier_code,
             'SupplierName' => $a->supplier->supplier_name,
+            'SupplierAddressId' => $a->supplier_address_id,
+            'LetterAddressLabel' => $a->letter_address_label,
+            'LetterAddress' => $a->letter_address,
+            'LetterAttentionName' => $a->letter_attention_name,
+            'LetterAttentionTitle' => $a->letter_attention_title,
             'PartCategory' => $a->part_category,
             'PartStatus' => $a->part_status,
             'Model' => $a->model,
@@ -716,6 +761,10 @@ class AprRepo
             'Currency' => $d->currency,
             'Qty' => $d->qty,
             'CurrentPrice' => $d->current_price,
+            'PriceTcFrom' => $d->price_tc_from?->toDateString(),
+            'PriceTcTo' => $d->price_tc_to?->toDateString(),
+            'PriceQuotation' => $d->price_quotation,
+            'PriceStatus' => ItemPrice::statusOn($d->price_tc_from, $d->price_tc_to, $apr->doc_date),
             'NewPrice' => $d->new_price,
             'Movement' => $movement,
             'MovementPct' => $pct,
