@@ -48,6 +48,75 @@ class NewPriceRepo
     }
 
     /**
+     * Semua new price yang sudah disimpan (semua periode), untuk tab Saved New Prices.
+     *
+     * @return object[] urut periode terbaru dulu, lalu supplier dan item
+     */
+    public function saved(?int $supplierId): array
+    {
+        $threshold = (float) config('apr.remark_threshold_pct');
+
+        return NewPrice::query()
+            ->with('supplier:supplier_id,supplier_code,supplier_name')
+            ->when($supplierId, fn ($q) => $q->where('supplier_id', $supplierId))
+            ->orderByDesc('new_tc_from')->orderBy('supplier_id')->orderBy('item_code')
+            ->get()
+            ->map(function (NewPrice $n) use ($threshold) {
+                $movement = $n->new_price - $n->current_price;
+                $pct = $n->current_price > 0 ? round($movement / $n->current_price * 100, 2) : null;
+
+                return (object) [
+                    'Key' => $n->new_price_id,
+                    'PeriodFrom' => $n->new_tc_from->toDateString(),
+                    'PeriodTo' => $n->new_tc_to->toDateString(),
+                    'ItemCode' => $n->item_code,
+                    'ItemName' => $n->item_name,
+                    'Unit' => $n->unit,
+                    'SupplierId' => $n->supplier_id,
+                    'SupplierCode' => $n->supplier?->supplier_code,
+                    'SupplierName' => $n->supplier?->supplier_name,
+                    'Currency' => $n->currency,
+                    'CurrentPrice' => $n->current_price,
+                    'CurrentTcFrom' => $n->current_tc_from?->toDateString(),
+                    'CurrentTcTo' => $n->current_tc_to?->toDateString(),
+                    'Quotation' => $n->current_quotation,
+                    'NewPrice' => $n->new_price,
+                    'Movement' => round($movement, 4),
+                    'MovementPct' => $pct,
+                    'Remark' => $n->remark,
+                    'NeedRemark' => $pct !== null && $pct > $threshold && trim((string) $n->remark) === '',
+                    'Status' => $n->status,
+                    'ModifiedBy' => $n->updated_by ?? $n->created_by,
+                    'ModifiedDate' => $n->updated_at ?? $n->created_at,
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * Hapus semua new price satu periode + supplier (hanya yang masih Draft). Dihapus per model supaya tercatat di audit trail.
+     */
+    public function deleteSet(string $from, string $to, int $supplierId): DBResult
+    {
+        if ($error = $this->validatePeriod($from, $to)) {
+            return new DBResult(false, $error);
+        }
+        $list = NewPrice::query()->with('supplier:supplier_id,supplier_code')
+            ->where('new_tc_from', $from)->where('new_tc_to', $to)->where('supplier_id', $supplierId)->get();
+        if ($list->isEmpty()) {
+            return new DBResult(false, 'New price not found. It may have been deleted by another user.');
+        }
+        $locked = $list->where('status', '!=', NewPrice::StatusDraft)->count();
+        if ($locked > 0) {
+            return new DBResult(false, "{$locked} new price(s) are no longer Draft and cannot be deleted.");
+        }
+
+        DB::transaction(fn () => $list->each->delete());
+
+        return new DBResult(true, $list->count() . ' new price(s) deleted.');
+    }
+
+    /**
      * Simpan perubahan lembar kerja (semua atau tidak sama sekali).
      * Baris dengan NewPrice kosong = hapus new price tersimpan untuk periode ini.
      *

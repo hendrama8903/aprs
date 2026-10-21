@@ -100,9 +100,12 @@ Route::middleware('menu.access:/ExchangeRate/Index')->group(function () {
 Route::middleware('menu.access:/NewPrice/Index')->group(function () {
     Route::get('/NewPrice/Index', [NewPriceController::class, 'index']);
     Route::post('/NewPrice/Search', [NewPriceController::class, 'search']);
+    Route::post('/NewPrice/Saved', [NewPriceController::class, 'saved']);
     Route::post('/NewPrice/Save', [NewPriceController::class, 'save']);
+    Route::post('/NewPrice/Delete', [NewPriceController::class, 'delete']);
     Route::post('/NewPrice/Upload', [NewPriceController::class, 'upload']);
     Route::get('/NewPrice/DownloadExcel', [NewPriceController::class, 'downloadExcel']);
+    Route::get('/NewPrice/DownloadSavedExcel', [NewPriceController::class, 'downloadSavedExcel']);
 });
 
 Route::middleware('menu.access:/Apr/Index')->group(function () {

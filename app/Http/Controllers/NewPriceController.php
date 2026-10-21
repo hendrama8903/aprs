@@ -31,6 +31,11 @@ class NewPriceController extends Controller
         return $this->jsonData(fn () => $this->newPriceRepo->worksheet(...$this->filters($request)));
     }
 
+    public function saved(Request $request)
+    {
+        return $this->jsonData(fn () => $this->newPriceRepo->saved($request->filled('supplierId') ? (int) $request->input('supplierId') : null));
+    }
+
     public function save(Request $request)
     {
         return $this->runJson(function () use ($request) {
@@ -44,6 +49,21 @@ class NewPriceController extends Controller
                 (string) $request->input('dateTo'),
                 is_array($rows) ? $rows : [],
                 $this->loginUsername(),
+            );
+        });
+    }
+
+    public function delete(Request $request)
+    {
+        return $this->runJson(function () use ($request) {
+            if (!$this->hasPermission(PermissionCodes::NewPriceEdit)) {
+                return new DBResult(false, 'You do not have permission to perform this action.');
+            }
+
+            return $this->newPriceRepo->deleteSet(
+                (string) $request->input('dateFrom'),
+                (string) $request->input('dateTo'),
+                (int) $request->input('supplierId'),
             );
         });
     }
@@ -84,6 +104,23 @@ class NewPriceController extends Controller
                 $r->CurrentPrice, $r->CurrentTcFrom, $r->CurrentTcTo, $r->Quotation, $r->NewPrice, $r->Remark,
                 $r->NewPrice !== null && $r->CurrentPrice > 0 ? round(($r->NewPrice - $r->CurrentPrice) / $r->CurrentPrice * 100, 2) : null,
                 $r->Status,
+            ],
+        );
+    }
+
+    public function downloadSavedExcel()
+    {
+        return $this->exportExcel(
+            'Saved New Price',
+            'SAVED-NEW-PRICE',
+            ['Period From', 'Period To', 'Supplier Code', 'Supplier Name', 'Item Code', 'Item Name', 'Unit', 'Currency',
+                'Current Price', 'Current TC From', 'Current TC To', 'Quotation', 'New Price', 'Movement', 'Movement %', 'Remark',
+                'Status', 'Modified By', 'Modified Date'],
+            $this->newPriceRepo->saved(null),
+            fn (object $r) => [
+                $r->PeriodFrom, $r->PeriodTo, $r->SupplierCode, $r->SupplierName, $r->ItemCode, $r->ItemName, $r->Unit, $r->Currency,
+                $r->CurrentPrice, $r->CurrentTcFrom, $r->CurrentTcTo, $r->Quotation, $r->NewPrice, $r->Movement, $r->MovementPct, $r->Remark,
+                $r->Status, $r->ModifiedBy, $r->ModifiedDate,
             ],
         );
     }
