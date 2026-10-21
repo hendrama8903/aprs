@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Role extends Model
 {
+    use Auditable;
+
+    public const AuditModule = 'Role';
+
     protected $table = 'roles';
     protected $primaryKey = 'role_id';
     protected $guarded = [];
@@ -30,5 +35,10 @@ class Role extends Model
     public function users(): HasMany
     {
         return $this->hasMany(UserAccount::class, 'role_id', 'role_id');
+    }
+
+    public function auditLabel(): string
+    {
+        return (string) $this->role_code;
     }
 }

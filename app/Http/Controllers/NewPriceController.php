@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Repositories\ItemRepo;
 use App\Repositories\NewPriceRepo;
 use App\Repositories\OgsImportRepo;
 use App\Support\DBResult;
@@ -19,11 +18,10 @@ class NewPriceController extends Controller
     {
     }
 
-    public function index(ItemRepo $itemRepo)
+    public function index()
     {
         return view('new-price.index', [
             'edit' => $this->hasPermission(PermissionCodes::NewPriceEdit),
-            'categories' => $itemRepo->categories(),
             'threshold' => config('apr.remark_threshold_pct'),
         ]);
     }
@@ -78,11 +76,11 @@ class NewPriceController extends Controller
         return $this->exportExcel(
             'New Price ' . $from,
             'NEW-PRICE',
-            ['Item Code', 'Item Name', 'Unit', 'Category', 'Supplier Code', 'Supplier Name', 'Plant', 'Currency',
+            ['Item Code', 'Item Name', 'Unit', 'Supplier Code', 'Supplier Name', 'Plant', 'Currency',
                 'Current Price', 'Current TC From', 'Current TC To', 'Quotation', 'New Price', 'Remark', 'Movement %', 'Status'],
             $this->newPriceRepo->worksheet(...$this->filters($request)),
             fn (object $r) => [
-                $r->ItemCode, $r->ItemName, $r->Unit, $r->Category, $r->SupplierCode, $r->SupplierName, $r->PlantCode, $r->Currency,
+                $r->ItemCode, $r->ItemName, $r->Unit, $r->SupplierCode, $r->SupplierName, $r->PlantCode, $r->Currency,
                 $r->CurrentPrice, $r->CurrentTcFrom, $r->CurrentTcTo, $r->Quotation, $r->NewPrice, $r->Remark,
                 $r->NewPrice !== null && $r->CurrentPrice > 0 ? round(($r->NewPrice - $r->CurrentPrice) / $r->CurrentPrice * 100, 2) : null,
                 $r->Status,
@@ -90,14 +88,13 @@ class NewPriceController extends Controller
         );
     }
 
-    /** @return array{0: string, 1: string, 2: ?int, 3: ?string} period from, period to, supplier, category */
+    /** @return array{0: string, 1: string, 2: ?int} period from, period to, supplier */
     private function filters(Request $request): array
     {
         return [
             (string) $request->input('dateFrom'),
             (string) $request->input('dateTo'),
             $request->filled('supplierId') ? (int) $request->input('supplierId') : null,
-            $request->input('category') ?: null,
         ];
     }
 }

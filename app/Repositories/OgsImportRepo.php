@@ -2,10 +2,12 @@
 
 namespace App\Repositories;
 
+use App\Models\AuditLog;
 use App\Models\Item;
 use App\Models\ItemPrice;
 use App\Models\OgsImport;
 use App\Models\Supplier;
+use App\Support\AuditTrail;
 use App\Support\DBResult;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -210,6 +212,8 @@ class OgsImportRepo
                 OgsImport::TypeLabels[$importType],
                 count($rows), $counts['inserted_rows'], $counts['updated_rows'], $counts['skipped_rows'], $this->warningCount,
             );
+            // Import memakai insert/upsert massal (tanpa event model), jadi dicatat satu baris per upload.
+            AuditTrail::log(AuditLog::ActionUpload, 'OGS Upload', (string) $import->import_id, OgsImport::TypeLabels[$importType] . ' - ' . $fileName, $message);
 
             return new DBResult(true, $message, $import->import_id);
         });

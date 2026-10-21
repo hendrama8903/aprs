@@ -21,15 +21,6 @@
                 <select class="form-control" id="filterSupplier"></select>
             </div>
             <div class="np-field">
-                <label>Category</label>
-                <select class="form-control" id="filterCategory">
-                    <option value="">All categories</option>
-                    @foreach ($categories as $category)
-                        <option value="{{ $category }}">{{ $category }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="np-field">
                 <label>&nbsp;</label>
                 <button type="button" class="dp-btn dp-btn-primary" id="btn_load"><i class="fa fa-search"></i> Load</button>
             </div>
@@ -145,7 +136,7 @@
 
         var rows = [];        // baris lembar kerja (format Search)
         var dirty = {};       // Key -> true untuk baris yang belum disimpan
-        var loaded = null;    // filter yang sedang ditampilkan: { dateFrom, dateTo, supplierId, category }
+        var loaded = null;    // filter yang sedang ditampilkan: { dateFrom, dateTo, supplierId }
         var grid;
 
         function num(v) { var n = parseFloat(v); return isNaN(n) ? null : n; }
@@ -165,8 +156,7 @@
             return {
                 dateFrom: $("#filterFrom").val(),
                 dateTo: $("#filterTo").val(),
-                supplierId: $("#filterSupplier").val() || "",
-                category: $("#filterCategory").val() || ""
+                supplierId: $("#filterSupplier").val() || ""
             };
         }
 
@@ -229,7 +219,6 @@
                 { dataField: "ItemCode", caption: "Item Code", allowEditing: false, fixed: true, fixedPosition: "left" },
                 { dataField: "ItemName", caption: "Item Name", allowEditing: false },
                 { dataField: "Unit", caption: "Unit", allowEditing: false, alignment: "center" },
-                { dataField: "Category", caption: "Category", allowEditing: false, visible: false },
                 { dataField: "SupplierCode", caption: "Supp. Code", allowEditing: false },
                 { dataField: "SupplierName", caption: "Supplier Name", allowEditing: false },
                 { dataField: "PlantCode", caption: "Plant", allowEditing: false, alignment: "center", visible: false },

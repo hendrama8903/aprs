@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class UserAccount extends Model
 {
+    use Auditable;
+
+    public const AuditModule = 'User';
+
     protected $table = 'user_accounts';
     protected $primaryKey = 'user_id';
     protected $guarded = [];
@@ -32,5 +37,10 @@ class UserAccount extends Model
     public function subordinates(): HasMany
     {
         return $this->hasMany(UserAccount::class, 'supervisor_user_id', 'user_id');
+    }
+
+    public function auditLabel(): string
+    {
+        return (string) $this->username;
     }
 }

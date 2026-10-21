@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Middleware\KeepSignedIn;
+use App\Models\AuditLog;
 use App\Repositories\AuthRepo;
+use App\Support\AuditTrail;
 use App\Support\PasswordHasher;
 use App\Support\SessionAuth;
 use App\Support\SessionKeys;
@@ -44,6 +46,7 @@ class AuthController extends Controller
             $user = $this->authRepo->getUserByUsername($username);
             if ($user === null || !$user->IsActive) {
                 Log::warning("Login failed for {$username}: user not found or inactive");
+                AuditTrail::log(AuditLog::ActionLoginFailed, 'Login', null, $username, 'Login failed: user not found or inactive', username: $username);
 
                 return response()->json(['status' => false, 'message' => self::INVALID_LOGIN_MESSAGE]);
             }
@@ -55,6 +58,7 @@ class AuthController extends Controller
 
             if (!PasswordHasher::verify($password, $user->PasswordHash)) {
                 Log::warning("Login failed for {$username}: invalid password");
+                AuditTrail::log(AuditLog::ActionLoginFailed, 'Login', (string) $user->UserId, $username, 'Login failed: invalid password', username: $username);
 
                 return response()->json(['status' => false, 'message' => self::INVALID_LOGIN_MESSAGE]);
             }
@@ -63,6 +67,7 @@ class AuthController extends Controller
             $permissions = $this->authRepo->getPermissionByRole((int) $user->RoleId);
             SessionAuth::signIn($user, $menus, $permissions);
             $this->authRepo->updateLastLogin((int) $user->UserId, $user->Username);
+            AuditTrail::log(AuditLog::ActionLogin, 'Login', (string) $user->UserId, $user->Username, 'Logged in');
 
             $returnUrl = (string) $request->input('returnUrl', '');
             $redirectUrl = $returnUrl !== '' && str_starts_with($returnUrl, '/') ? $returnUrl : '/';
@@ -108,6 +113,9 @@ class AuthController extends Controller
 
     public function logout()
     {
+        if (session()->has(SessionKeys::Username)) {
+            AuditTrail::log(AuditLog::ActionLogout, 'Login', (string) session(SessionKeys::UserId), $this->loginUsername(), 'Logged out');
+        }
         session()->flush();
         Cookie::queue(Cookie::forget(KeepSignedIn::KEEP_COOKIE));
 

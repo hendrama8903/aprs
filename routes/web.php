@@ -3,7 +3,9 @@
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ApprovalSettingController;
 use App\Http\Controllers\AprController;
+use App\Http\Controllers\AuditTrailController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DocNumberingController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ItemController;
@@ -135,6 +137,20 @@ Route::middleware('menu.access:/ApprovalSetting/Index')->group(function () {
     Route::post('/ApprovalSetting/Search', [ApprovalSettingController::class, 'search']);
     Route::post('/ApprovalSetting/GetByKey', [ApprovalSettingController::class, 'getByKey']);
     Route::post('/ApprovalSetting/AddEdit', [ApprovalSettingController::class, 'addEdit']);
+});
+
+Route::middleware('menu.access:/DocNumbering/Index')->group(function () {
+    Route::get('/DocNumbering/Index', [DocNumberingController::class, 'index']);
+    Route::post('/DocNumbering/Search', [DocNumberingController::class, 'search']);
+    Route::post('/DocNumbering/GetByKey', [DocNumberingController::class, 'getByKey']);
+    Route::post('/DocNumbering/AddEdit', [DocNumberingController::class, 'addEdit']);
+});
+
+Route::middleware('menu.access:/AuditTrail/Index')->group(function () {
+    Route::get('/AuditTrail/Index', [AuditTrailController::class, 'index']);
+    Route::post('/AuditTrail/Search', [AuditTrailController::class, 'search']);
+    Route::post('/AuditTrail/GetByKey', [AuditTrailController::class, 'getByKey']);
+    Route::get('/AuditTrail/DownloadExcel', [AuditTrailController::class, 'downloadExcel']);
 });
 
 // ---------- Administration ----------

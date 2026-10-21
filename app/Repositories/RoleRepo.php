@@ -2,8 +2,10 @@
 
 namespace App\Repositories;
 
+use App\Models\AuditLog;
 use App\Models\Menu;
 use App\Models\Role;
+use App\Support\AuditTrail;
 use App\Support\DBResult;
 use Illuminate\Support\Facades\DB;
 
@@ -150,6 +152,13 @@ class RoleRepo
         ));
 
         DB::transaction(function () use ($role, $finalMenuIds, $finalPermissionIds, $loginUser) {
+            // attach/detach tidak memicu event model: catat daftar akses lama & baru ke audit trail.
+            $access = fn () => [
+                'menus' => $role->menus()->orderBy('menus.menu_name')->pluck('menus.menu_name')->all(),
+                'permissions' => $role->permissions()->orderBy('permissions.permission_code')->pluck('permissions.permission_code')->all(),
+            ];
+            $old = $access();
+
             $now = now();
             $role->permissions()->detach();
             $role->menus()->detach();
@@ -158,6 +167,13 @@ class RoleRepo
             $role->permissions()->attach(array_fill_keys($finalPermissionIds, ['created_by' => $loginUser, 'created_at' => $now]));
 
             $role->update(['updated_by' => $loginUser]);
+
+            $new = $access();
+            if ($old !== $new) {
+                AuditTrail::log(AuditLog::ActionUpdate, 'Role Access', (string) $role->role_id, $role->role_code,
+                    sprintf('Updated access of role %s: %d menu(s), %d permission(s)', $role->role_code, count($new['menus']), count($new['permissions'])),
+                    $old, $new);
+            }
         });
 
         return new DBResult(true, 'Access saved successfully. Users with this role must log in again to apply the changes.');

@@ -23,28 +23,24 @@ class NewPriceRepo
     private const MaxErrors = 20;
 
     /** @return object[] */
-    public function worksheet(string $from, string $to, ?int $supplierId, ?string $category): array
+    public function worksheet(string $from, string $to, ?int $supplierId): array
     {
-        $valid = $this->validPrices($from, $supplierId, $category);
+        $valid = $this->validPrices($from, $supplierId);
         $saved = NewPrice::query()
             ->with('supplier:supplier_id,supplier_code,supplier_name')
             ->where('new_tc_from', $from)->where('new_tc_to', $to)
             ->when($supplierId, fn ($q) => $q->where('supplier_id', $supplierId))
             ->get()
             ->keyBy(fn (NewPrice $n) => $n->item_code . '|' . $n->supplier_id);
-        $categories = DB::table('items')->whereNotNull('category')->pluck('category', 'item_code')->all();
 
         $rows = [];
         foreach ($valid as $key => $p) {
-            $rows[$key] = $this->row($p, $saved[$key] ?? null, $categories[$p->item_code] ?? null);
+            $rows[$key] = $this->row($p, $saved[$key] ?? null);
         }
         // New price tersimpan yang current price-nya sudah tidak Valid lagi (mis. price master di-upload ulang):
         // tetap ditampilkan supaya bisa dicek / dihapus.
         foreach ($saved as $key => $n) {
-            $rows[$key] ??= $this->row(null, $n, $categories[$n->item_code] ?? null);
-        }
-        if ($category !== null && $category !== '') {
-            $rows = array_filter($rows, fn ($r) => $r->Category === $category);
+            $rows[$key] ??= $this->row(null, $n);
         }
         ksort($rows);
 
@@ -66,7 +62,7 @@ class NewPriceRepo
             return new DBResult(false, 'No changes to save.');
         }
 
-        $valid = $this->validPrices($from, null, null);
+        $valid = $this->validPrices($from, null);
         $errors = [];
         $saved = $deleted = 0;
 
@@ -120,7 +116,7 @@ class NewPriceRepo
         }
 
         $supplierIds = Supplier::query()->pluck('supplier_id', 'supplier_code')->all();
-        $valid = $this->validPrices($from, null, null);
+        $valid = $this->validPrices($from, null);
         $cell = fn (array $row, string $name) => isset($col[$name]) ? trim((string) ($row[$col[$name]] ?? '')) : '';
         $warnings = [];
         $saved = $skipped = 0;
@@ -233,13 +229,12 @@ class NewPriceRepo
      *
      * @return array<string,ItemPrice> "item_code|supplier_id" -> harga
      */
-    private function validPrices(string $date, ?int $supplierId, ?string $category): array
+    private function validPrices(string $date, ?int $supplierId): array
     {
         $prices = ItemPrice::query()
             ->with('supplier:supplier_id,supplier_code,supplier_name')
             ->validOn($date)
             ->when($supplierId, fn ($q) => $q->where('supplier_id', $supplierId))
-            ->when($category, fn ($q) => $q->whereIn('item_code', DB::table('items')->where('category', $category)->select('item_code')))
             ->orderByDesc('tc_from')
             ->orderByDesc('ogs_update_date')
             ->orderByDesc('item_price_id')
@@ -264,7 +259,7 @@ class NewPriceRepo
         return $from > $to ? 'Period from must not be later than period to.' : null;
     }
 
-    private function row(?ItemPrice $p, ?NewPrice $n, ?string $category): object
+    private function row(?ItemPrice $p, ?NewPrice $n): object
     {
         $current = $p?->price ?? $n?->current_price;
         $new = $n?->new_price;
@@ -274,7 +269,6 @@ class NewPriceRepo
             'ItemCode' => $p?->item_code ?? $n->item_code,
             'ItemName' => $p?->item_name ?? $n->item_name,
             'Unit' => $p?->unit ?? $n->unit,
-            'Category' => $category,
             'SupplierId' => $p?->supplier_id ?? $n->supplier_id,
             'SupplierCode' => ($p ?? $n)->supplier?->supplier_code,
             'SupplierName' => ($p ?? $n)->supplier?->supplier_name,

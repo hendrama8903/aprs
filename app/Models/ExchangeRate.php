@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -9,6 +10,10 @@ use Illuminate\Database\Eloquent\Model;
  */
 class ExchangeRate extends Model
 {
+    use Auditable;
+
+    public const AuditModule = 'Exchange Rate';
+
     protected $table = 'exchange_rates';
     protected $primaryKey = 'exchange_rate_id';
     protected $guarded = [];
@@ -18,4 +23,9 @@ class ExchangeRate extends Model
         'valid_from' => 'date',
         'valid_to' => 'date',
     ];
+
+    public function auditLabel(): string
+    {
+        return $this->currency . ' ' . $this->valid_from?->format('d-m-Y');
+    }
 }

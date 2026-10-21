@@ -73,6 +73,8 @@ class DatabaseSeeder extends Seeder
         $role = $menu('/Role/Index', $administration, 'Role & Access', 'fa-key', 20);
         $menuMaster = $menu('/Menu/Index', $administration, 'Menu Master', 'fa-sitemap', 30);
         $approvalSetting = $menu('/ApprovalSetting/Index', $administration, 'Approval Setting', 'fa-sort-amount-asc', 40);
+        $docNumbering = $menu('/DocNumbering/Index', $administration, 'Document Numbering', 'fa-sort-numeric-asc', 50);
+        $menu('/AuditTrail/Index', $administration, 'Audit Trail', 'fa-history', 60);
 
         // ---------- Permission ----------
         $permissions = [
@@ -108,6 +110,7 @@ class DatabaseSeeder extends Seeder
             [$menuMaster, 'MENU-EDIT', 'Edit'],
             [$menuMaster, 'MENU-DELETE', 'Delete'],
             [$approvalSetting, 'APPROVALSETTING-EDIT', 'Edit'],
+            [$docNumbering, 'DOCNUMBERING-EDIT', 'Edit'],
         ];
         $permissionIds = [];
         foreach ($permissions as [$m, $code, $name]) {

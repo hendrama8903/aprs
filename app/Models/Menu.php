@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -9,6 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Menu extends Model
 {
+    use Auditable;
+
+    public const AuditModule = 'Menu';
+
     protected $table = 'menus';
     protected $primaryKey = 'menu_id';
     protected $guarded = [];
@@ -35,5 +40,10 @@ class Menu extends Model
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'role_menu', 'menu_id', 'role_id');
+    }
+
+    public function auditLabel(): string
+    {
+        return (string) $this->menu_name;
     }
 }

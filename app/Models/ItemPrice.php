@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -13,6 +14,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ItemPrice extends Model
 {
+    use Auditable;
+
+    public const AuditModule = 'Item Price';
+
     // Status harga terhadap satu tanggal acuan (tanggal dokumen APR, atau hari ini).
     public const StatusValid = 'VALID';
     public const StatusExpired = 'EXPIRED';
@@ -63,5 +68,10 @@ class ItemPrice extends Model
             $from->gt($date->copy()->startOfDay()) => self::StatusNotYetValid,
             default => self::StatusValid,
         };
+    }
+
+    public function auditLabel(): string
+    {
+        return $this->item_code . ' / ' . $this->supplier?->supplier_code;
     }
 }

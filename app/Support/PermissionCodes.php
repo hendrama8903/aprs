@@ -48,4 +48,6 @@ final class PermissionCodes
     public const MenuAdd = 'MENU-ADD';
     public const MenuEdit = 'MENU-EDIT';
     public const MenuDelete = 'MENU-DELETE';
+
+    public const DocNumberingEdit = 'DOCNUMBERING-EDIT';
 }

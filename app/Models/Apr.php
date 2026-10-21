@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** Dokumen Approval for Price Confirmation (header). */
 class Apr extends Model
 {
+    use Auditable;
+
+    public const AuditModule = 'APR';
+
     public const StatusDraft = 'DRAFT';
     public const StatusInApproval = 'IN_APPROVAL';
     public const StatusRejected = 'REJECTED';
@@ -67,5 +72,10 @@ class Apr extends Model
             'JPY' => $new ? $this->rate_jpy_new : $this->rate_jpy_current,
             default => 1.0,
         };
+    }
+
+    public function auditLabel(): string
+    {
+        return (string) $this->doc_no;
     }
 }
