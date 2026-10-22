@@ -15,7 +15,6 @@
         <button type="button" class="dp-btn dp-btn-outline" id="btn_refresh"><i class="fa fa-refresh"></i> Refresh</button>
     </div>
     <div class="dp-toolbar-right">
-        @include('partials.ogs-last-upload')
         <button type="button" class="dp-btn dp-btn-outline" id="btn_export"><i class="fa fa-download"></i> Export Excel</button>
     </div>
 </div>

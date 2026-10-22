@@ -174,17 +174,31 @@ class MakeDummyOgs extends Command
         $start = Carbon::parse('2025-01-01');
         $end = Carbon::parse('2026-09-30');
 
+        // Purchase period default APR (6 bulan penuh terakhir): setiap pasangan item/supplier yang punya harga
+        // minimal punya 2 PO di sini, supaya Qty di APR tidak 0.
+        $recentFrom = Carbon::parse('2026-04-01');
+        $minRecentPos = 2;
+
         foreach ($pairs as $pair) {
-            if (mt_rand(1, 100) > 85) {
-                continue; // tidak semua item pernah di-PO
-            }
             $item = $items[$pair['code']];
             [$supCode, $supName, $currency] = $pair['supplier'];
 
+            $months = [];
             for ($month = $start->copy(); $month->lte($end); $month->addMonth()) {
-                if (mt_rand(1, 100) > 45) {
-                    continue;
+                if (mt_rand(1, 100) <= 45) {
+                    $months[] = $month->copy();
                 }
+            }
+            $recentMonths = array_filter($months, fn (Carbon $m) => $m->gte($recentFrom));
+            while (count($recentMonths) < $minRecentPos) {
+                $m = $recentFrom->copy()->addMonths(mt_rand(0, 5));
+                if (!in_array($m->format('Y-m'), array_map(fn (Carbon $x) => $x->format('Y-m'), $months), true)) {
+                    $months[] = $recentMonths[] = $m;
+                }
+            }
+            usort($months, fn (Carbon $a, Carbon $b) => $a <=> $b);
+
+            foreach ($months as $month) {
                 $date = $month->copy()->day(mt_rand(1, 28));
                 // Harga PO mengikuti periode harga: sebelum Apr 2026 pakai harga lama, sesudahnya harga current,
                 // dengan sedikit variasi (diskon/negosiasi per PO).

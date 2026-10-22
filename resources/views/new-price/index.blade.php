@@ -21,15 +21,10 @@
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_refresh"><i class="fa fa-refresh"></i> Refresh</button>
             </div>
             <div class="dp-toolbar-right">
-                <span class="np-info" id="savedInfo"></span>
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_savedExport"><i class="fa fa-download"></i> Export Excel</button>
             </div>
         </div>
         <div class="box-body">
-            <div class="np-legend">
-                <span><i class="fa fa-ellipsis-v"></i> row menu: view{{ $edit ? ', edit, delete' : '' }} · click a row to view its detail</span>
-                <span><i class="fa fa-pencil text-red"></i> remark required (increase above {{ $threshold }}%)</span>
-            </div>
             <div id="savedGrid"></div>
         </div>
     </div>
@@ -66,16 +61,10 @@
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_workRefresh"><i class="fa fa-refresh"></i> Refresh</button>
             </div>
             <div class="dp-toolbar-right">
-                <span class="np-info" id="loadedInfo"></span>
                 <button type="button" class="dp-btn dp-btn-outline" id="btn_export"><i class="fa fa-download"></i> Export Excel</button>
             </div>
         </div>
         <div class="box-body">
-            <div class="np-legend">
-                <span><i class="fa fa-pencil text-red"></i> remark required (increase above {{ $threshold }}%)</span>
-                <span><i class="fa fa-exclamation-triangle text-yellow"></i> current price changed since saved / no longer valid</span>
-                <span><span class="np-swatch"></span> unsaved change</span>
-            </div>
             <div id="datagrid"></div>
         </div>
     </div>
@@ -162,12 +151,9 @@
 <style>
     .np-filter { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; padding: 14px 16px 4px; }
     .np-field label, .np-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
-    .np-grow { flex: 1 1 260px; min-width: 200px; }
+    .np-grow { flex: 0 1 360px; min-width: 220px; }
     .np-range { display: flex; align-items: center; gap: 6px; }
     .np-range span { font-size: 12px; color: #6b7280; }
-    .np-info { display: inline-block; margin-right: 10px; font-size: 12px; color: #6b7280; }
-    .np-legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: #6b7280; margin-bottom: 8px; }
-    .np-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: #FFF4D6; border: 1px solid #F2D27A; vertical-align: -1px; }
     .np-dirty td { background: #FFF4D6 !important; }
     .np-cell-warn { color: #9A6200; margin-left: 4px; }
     .np-cell-need { color: #B42318; }
@@ -284,12 +270,7 @@
                 savedRows = result.data || [];
                 savedHeaders = buildHeaders(savedRows);
                 savedGrid.option("dataSource", savedHeaders);
-                var periods = {};
-                $.each(savedHeaders, function (_, h) { periods[periodKey(h.PeriodFrom, h.PeriodTo)] = 1; });
                 $("#savedCount").text(savedHeaders.length || "");
-                $("#savedInfo").text(savedHeaders.length
-                    ? Object.keys(periods).length + " period(s) · " + savedHeaders.length + " supplier set(s) · " + savedRows.length + " new price(s)"
-                    : "");
                 if (detailHeader && $("#modalDetail").is(":visible")) {
                     var h = $.grep(savedHeaders, function (x) { return x.Key === detailHeader.Key; })[0];
                     if (h) showDetail(h); else $("#modalDetail").modal("hide");
@@ -299,10 +280,12 @@
 
         function buildSavedGrid() {
             var columns = [
+                HMA.col.rowNumber(),
                 {
-                    name: "actions", caption: "", width: 44, alignment: "center", allowFiltering: false, allowSorting: false, allowResizing: false,
+                    name: "actions", caption: "Action", width: 70, alignment: "center", allowFiltering: false, allowSorting: false, allowResizing: false,
+                    fixed: true, fixedPosition: "left",
                     cellTemplate: function (c, o) {
-                        $("<button type='button' class='np-kebab' title='Actions'><i class='fa fa-ellipsis-v'></i></button>")
+                        $("<button type='button' class='np-kebab' title='{{ $edit ? 'View, edit or delete' : 'View detail' }}'><i class='fa fa-ellipsis-v'></i></button>")
                             .on("click", function (ev) { ev.stopPropagation(); openRowMenu(this, o.data); })
                             .appendTo(c);
                     }
@@ -384,7 +367,7 @@
         }
         $(document).on("click", function (e) { if (!$(e.target).closest(".np-menu, .np-kebab").length) closeRowMenu(); })
             .on("keydown", function (e) { if (e.key === "Escape") closeRowMenu(); });
-        $(window).on("resize scroll", closeRowMenu);
+        $(window).on("resize", closeRowMenu);
 
         function deleteSet(h) {
             showConfirmMesg("Delete " + h.ItemCount + " new price(s) of " + h.SupplierCode + " - " + h.SupplierName
@@ -508,10 +491,6 @@
                 if (r.NewPrice !== null) s.withNew++;
                 if (dirty[r.Key]) s.dirty++;
             });
-            var withNew = $.grep(rows, function (r) { return r.NewPrice !== null; }).length;
-            if (loaded) {
-                $("#loadedInfo").text(dmy(loaded.dateFrom) + " - " + dmy(loaded.dateTo) + " · " + rows.length + " item(s), " + withNew + " with new price");
-            }
             // Semua supplier: dikelompokkan per supplier supaya progres tiap supplier terlihat. Satu supplier: daftar biasa.
             var groupIndex = loaded && !loaded.supplierId ? 0 : undefined;
             if (grid.columnOption("SupplierGroup", "groupIndex") !== groupIndex) grid.columnOption("SupplierGroup", "groupIndex", groupIndex);

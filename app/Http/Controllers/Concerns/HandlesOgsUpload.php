@@ -17,12 +17,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 trait HandlesOgsUpload
 {
-    /** Waktu upload terakhir jenis ini, untuk ditampilkan di toolbar. */
-    protected function lastOgsImport(string $type): ?object
-    {
-        return app(OgsImportRepo::class)->lastImports()[$type];
-    }
-
     protected function ogsTemplate(string $type): StreamedResponse
     {
         $writer = new Xlsx(app(OgsImportRepo::class)->template($type));

@@ -6,6 +6,8 @@ use App\Models\ApprovalStep;
 use App\Models\Apr;
 use App\Models\AprApproval;
 use App\Models\AprDetail;
+use App\Models\Item;
+use App\Models\NewPrice;
 use App\Models\ItemPrice;
 use App\Models\Notification;
 use App\Models\Supplier;
@@ -27,13 +29,33 @@ use Illuminate\Support\Facades\DB;
  */
 class AprRepo
 {
-    public function __construct(private ApprovalStepRepo $approvalStepRepo)
+    public function __construct(private ApprovalStepRepo $approvalStepRepo, private AprAttachmentRepo $attachmentRepo)
     {
     }
 
     // ---------- Query ----------
 
     /** @return object[] */
+    /**
+     * Pilihan dropdown Part Category / Part Status / Model di form: default config + nilai yang pernah dipakai di APR
+     * (+ kategori item untuk Part Category). Nilai lain tetap bisa diketik di form.
+     *
+     * @return array{PartCategory: string[], PartStatus: string[], Model: string[]}
+     */
+    public function headerOptions(): array
+    {
+        $defaults = config('apr.defaults');
+        $used = fn (string $column) => Apr::query()->whereNotNull($column)->distinct()->pluck($column)->all();
+        $merge = fn (array ...$lists) => array_values(array_unique(array_filter(array_map('trim', array_merge(...$lists)), 'strlen')));
+
+        return [
+            'PartCategory' => $merge([$defaults['part_category']], $used('part_category'),
+                Item::query()->whereNotNull('category')->distinct()->orderBy('category')->pluck('category')->all()),
+            'PartStatus' => $merge([$defaults['part_status'], 'Component Part', 'Non Component Part'], $used('part_status')),
+            'Model' => $merge([$defaults['model']], $used('model')),
+        ];
+    }
+
     public function search(?string $status, ?int $supplierId, ?string $dateFrom, ?string $dateTo): array
     {
         $steps = ApprovalStep::query()->with('approver:user_id,full_name')->get()->keyBy('step_no');
@@ -145,6 +167,7 @@ class AprRepo
                 'ActionDate' => $h->created_at,
             ])->all(),
             'Signatures' => $this->signatures($apr),
+            'Attachments' => $this->attachmentRepo->list($apr->apr_id),
             'CurrentStep' => $currentStep ? (object) [
                 'StepNo' => $currentStep->step_no,
                 'StepName' => $currentStep->step_name,
@@ -167,10 +190,18 @@ class AprRepo
      *
      * @return object[]
      */
-    public function candidateItems(int $supplierId, string $docDate, string $purchaseFrom, string $purchaseTo): array
+    public function candidateItems(int $supplierId, string $docDate, string $purchaseFrom, string $purchaseTo, ?string $effectiveFrom = null): array
     {
         $prices = $this->currentPrices($supplierId, $docDate);
         $stats = $this->poStats($supplierId, array_keys($prices), $purchaseFrom, $purchaseTo);
+
+        // New price dari menu Set New Price: periode harga baru yang mencakup awal effective period APR.
+        $setPrices = $effectiveFrom === null ? collect() : NewPrice::query()
+            ->where('supplier_id', $supplierId)
+            ->whereIn('item_code', array_keys($prices))
+            ->where('new_tc_from', '<=', $effectiveFrom)->where('new_tc_to', '>=', $effectiveFrom)
+            ->get()
+            ->keyBy('item_code');
 
         return array_values(array_map(fn (ItemPrice $p) => (object) [
             'ItemCode' => $p->item_code,
@@ -188,6 +219,10 @@ class AprRepo
             'PoMinPrice' => $stats[$p->item_code]->min_price ?? null,
             'PoMaxPrice' => $stats[$p->item_code]->max_price ?? null,
             'PoLastPrice' => $stats[$p->item_code]->last_price ?? null,
+            'SetNewPrice' => $setPrices->get($p->item_code)?->new_price,
+            'SetNewRemark' => $setPrices->get($p->item_code)?->remark,
+            'SetNewFrom' => $setPrices->get($p->item_code)?->new_tc_from?->toDateString(),
+            'SetNewTo' => $setPrices->get($p->item_code)?->new_tc_to?->toDateString(),
         ], $prices));
     }
 
@@ -288,6 +323,7 @@ class AprRepo
         }
 
         $apr->delete();
+        $this->attachmentRepo->deleteFiles($aprId);
 
         return new DBResult(true, "Document {$apr->doc_no} deleted.");
     }
@@ -320,10 +356,10 @@ class AprRepo
                 }
             }
             if ($this->usesCurrency($apr, 'USD') && ($apr->rate_usd_current <= 0 || $apr->rate_usd_new <= 0)) {
-                $errors[] = 'USD exchange rate (current and new) is required because some items are in USD.';
+                $errors[] = 'USD exchange rate is required because some items are in USD: choose the rate, and make sure the Exchange Rate master has a USD rate valid on the document date (current rate).';
             }
             if ($this->usesCurrency($apr, 'JPY') && ($apr->rate_jpy_current <= 0 || $apr->rate_jpy_new <= 0)) {
-                $errors[] = 'JPY exchange rate (current and new) is required because some items are in JPY.';
+                $errors[] = 'JPY exchange rate is required because some items are in JPY: choose the rate, and make sure the Exchange Rate master has a JPY rate valid on the document date (current rate).';
             }
 
             $steps = $this->approvalStepRepo->activeSteps();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\UserAccount;
+use App\Repositories\AprAttachmentRepo;
 use App\Repositories\AprRepo;
 use App\Repositories\ExchangeRateRepo;
 use App\Support\DBResult;
@@ -11,6 +12,7 @@ use App\Support\SessionAuth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Dokumen Approval for Price Confirmation: daftar, form header-detail, workflow, dan cetak PDF.
@@ -19,7 +21,7 @@ use Illuminate\Http\Request;
  */
 class AprController extends Controller
 {
-    public function __construct(private AprRepo $aprRepo)
+    public function __construct(private AprRepo $aprRepo, private AprAttachmentRepo $attachmentRepo)
     {
     }
 
@@ -57,6 +59,12 @@ class AprController extends Controller
             'parentTitle' => 'Price Confirmation',
             'aprId' => $aprId,
             'defaults' => config('apr.defaults'),
+            'headerOptions' => $this->aprRepo->headerOptions(),
+            'attachment' => [
+                'maxBytes' => AprAttachmentRepo::maxBytes(),
+                'extensions' => AprAttachmentRepo::Extensions,
+                'maxFiles' => AprAttachmentRepo::MaxFiles,
+            ],
             'threshold' => config('apr.remark_threshold_pct'),
             'backUrl' => SessionAuth::hasMenu('/Apr/Index') ? url('/Apr/Index') : url('/Approval/Index'),
         ]);
@@ -81,6 +89,7 @@ class AprController extends Controller
             (string) ($request->input('docDate') ?: now()->toDateString()),
             (string) $request->input('purchaseFrom'),
             (string) $request->input('purchaseTo'),
+            \DateTime::createFromFormat('!Y-m-d', (string) $request->input('effectiveFrom')) ? (string) $request->input('effectiveFrom') : null,
         ));
     }
 
@@ -92,6 +101,7 @@ class AprController extends Controller
         return $this->jsonData(fn () => [
             'Current' => ($d = $date('docDate')) ? $exchangeRateRepo->ratesOn($d) : null,
             'New' => ($d = $date('effectiveFrom')) ? $exchangeRateRepo->ratesOn($d) : null,
+            'Options' => $exchangeRateRepo->options(),
         ]);
     }
 
@@ -140,6 +150,39 @@ class AprController extends Controller
         return $this->runJson(fn () => $this->hasPermission(PermissionCodes::AprIssue)
             ? $this->aprRepo->issue((int) $request->input('aprId'), $this->user())
             : $this->denied());
+    }
+
+    // ---------- Lampiran (dokumen pendukung) ----------
+
+    public function uploadAttachment(Request $request)
+    {
+        return $this->runJson(fn () => $this->canChangeAttachments()
+            ? $this->attachmentRepo->upload((int) $request->input('aprId'), $request->file('file'), $this->loginUsername())
+            : $this->denied());
+    }
+
+    public function deleteAttachment(Request $request)
+    {
+        return $this->runJson(fn () => $this->canChangeAttachments()
+            ? $this->attachmentRepo->delete((int) $request->input('attachmentId'))
+            : $this->denied());
+    }
+
+    public function downloadAttachment(Request $request)
+    {
+        if (!$this->canView()) {
+            return response()->view('errors.403', [], 403);
+        }
+        $attachment = $this->attachmentRepo->find((int) $request->query('id'));
+        abort_if($attachment === null, 404, 'Attachment not found.');
+
+        return Storage::disk(AprAttachmentRepo::Disk)->download($attachment->stored_path, $attachment->file_name);
+    }
+
+    /** Lampiran boleh diubah oleh pembuat (APR-ADD, termasuk tepat setelah simpan pertama) atau editor (APR-EDIT). */
+    private function canChangeAttachments(): bool
+    {
+        return $this->hasPermission(PermissionCodes::AprEdit) || $this->hasPermission(PermissionCodes::AprAdd);
     }
 
     /** Form APR internal (untuk arsip / tanda tangan basah bila diperlukan). */

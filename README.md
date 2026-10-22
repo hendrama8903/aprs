@@ -31,6 +31,7 @@ Repository **tidak** menyimpan data OGS asli. Untuk development/demo pakai file 
 item master → price master → PO transaction, masing-masing lewat tombol **Upload** di menu
 *Master Data → Item*, *Item Price*, dan *PO Transaction*.
 Setelah itu isi alamat surat dummy supplier: `php artisan db:seed --class=DummySupplierAddressSeeder`.
+Kurs dummy USD / JPY (master Exchange Rate): `php artisan db:seed --class=DummyExchangeRateSeeder`.
 
 Seeder membuat user `admin` (password di `DatabaseSeeder`, wajib diganti) dan user **dummy** untuk tiap peran
 (staff PUD, 5 approver, viewer Finance) — daftar username & password ada di docblock `database/seeders/DatabaseSeeder.php`.

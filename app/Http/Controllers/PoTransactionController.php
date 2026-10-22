@@ -23,7 +23,6 @@ class PoTransactionController extends Controller
     {
         return view('po-transaction.index', [
             'upload' => $this->hasPermission(PermissionCodes::PoTransactionUpload),
-            'lastImport' => $this->lastOgsImport(OgsImport::TypePo),
         ]);
     }
 

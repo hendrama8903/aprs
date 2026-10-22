@@ -54,6 +54,11 @@ class Apr extends Model
         return $this->hasMany(AprDetail::class, 'apr_id', 'apr_id')->orderBy('line_no');
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(AprAttachment::class, 'apr_id', 'apr_id')->orderBy('apr_attachment_id');
+    }
+
     public function approvals(): HasMany
     {
         return $this->hasMany(AprApproval::class, 'apr_id', 'apr_id')->orderBy('apr_approval_id');

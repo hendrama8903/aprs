@@ -62,7 +62,6 @@
 
 @push('ogs-upload-scripts')
 <style>
-    .ogs-last { display: inline-block; margin-right: 10px; font-size: 12px; color: #6b7280; }
     .ogs-template { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 600; }
     .ogs-warnings { max-height: 420px; overflow-y: auto; padding-left: 18px; margin: 0; }
     .ogs-warnings li { margin-bottom: 6px; word-break: break-word; }

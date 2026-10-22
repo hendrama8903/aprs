@@ -25,6 +25,9 @@ return [
         'external' => env('APR_DOC_NO_EXTERNAL', '{no}/PC-EXT/{dept}/{roman}/{yy}'),
     ],
 
+    // Batas ukuran per file lampiran APR (MB). Batas upload PHP (upload_max_filesize / post_max_size) tetap berlaku.
+    'attachment_max_mb' => (int) env('APR_ATTACHMENT_MAX_MB', 10),
+
     // Isi awal form APR baru.
     'defaults' => [
         'part_category' => 'CONSUMABLE',

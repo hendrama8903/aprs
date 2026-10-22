@@ -30,6 +30,26 @@ class ExchangeRateRepo
             ->all();
     }
 
+    /**
+     * Pilihan kurs untuk dropdown di form APR, per mata uang (periode terbaru dulu).
+     *
+     * @return array<string, array<int, array{Rate: float, ValidFrom: string, ValidTo: string}>>
+     */
+    public function options(): array
+    {
+        $result = array_fill_keys(self::Currencies, []);
+        ExchangeRate::query()->whereIn('currency', self::Currencies)->orderByDesc('valid_from')->get()
+            ->each(function (ExchangeRate $r) use (&$result) {
+                $result[$r->currency][] = [
+                    'Rate' => (float) $r->rate,
+                    'ValidFrom' => $r->valid_from->toDateString(),
+                    'ValidTo' => $r->valid_to->toDateString(),
+                ];
+            });
+
+        return $result;
+    }
+
     /** @return array<string, ?float> kurs tiap mata uang yang berlaku pada $date (Y-m-d); null kalau tidak ada. */
     public function ratesOn(string $date): array
     {

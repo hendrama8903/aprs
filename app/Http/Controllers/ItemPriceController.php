@@ -24,7 +24,6 @@ class ItemPriceController extends Controller
     {
         return view('item-price.index', $this->crudPermissions('ITEMPRICE') + [
             'upload' => $this->hasPermission(PermissionCodes::ItemPriceUpload),
-            'lastImport' => $this->lastOgsImport(OgsImport::TypePrice),
             'currencies' => ItemPriceRepo::Currencies,
         ]);
     }

@@ -117,6 +117,8 @@ Route::middleware('menu.access:/Apr/Index')->group(function () {
     Route::post('/Apr/Delete', [AprController::class, 'delete']);
     Route::post('/Apr/Submit', [AprController::class, 'submit']);
     Route::post('/Apr/Issue', [AprController::class, 'issue']);
+    Route::post('/Apr/UploadAttachment', [AprController::class, 'uploadAttachment']);
+    Route::post('/Apr/DeleteAttachment', [AprController::class, 'deleteAttachment']);
 });
 
 // Dibuka dari APR List maupun Approval Inbox; akses menu dicek di AprController::canView().
@@ -125,6 +127,7 @@ Route::middleware('menu.access')->group(function () {
     Route::post('/Apr/GetByKey', [AprController::class, 'getByKey']);
     Route::get('/Apr/PrintApr', [AprController::class, 'printApr']);
     Route::get('/Apr/PrintLetter', [AprController::class, 'printLetter']);
+    Route::get('/Apr/DownloadAttachment', [AprController::class, 'downloadAttachment']);
 });
 
 Route::middleware('menu.access:/Approval/Index')->group(function () {
