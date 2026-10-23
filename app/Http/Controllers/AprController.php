@@ -7,6 +7,7 @@ use App\Repositories\AprAttachmentRepo;
 use App\Repositories\AprRepo;
 use App\Repositories\ExchangeRateRepo;
 use App\Support\DBResult;
+use App\Support\PdfMerger;
 use App\Support\PermissionCodes;
 use App\Support\SessionAuth;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -185,7 +186,10 @@ class AprController extends Controller
         return $this->hasPermission(PermissionCodes::AprEdit) || $this->hasPermission(PermissionCodes::AprAdd);
     }
 
-    /** Form APR internal (untuk arsip / tanda tangan basah bila diperlukan). */
+    /**
+     * Paket cetak APR dalam satu PDF, urutan seperti berkas kertas: surat Price Confirmation, Attachment Letter,
+     * form APR, lalu semua file lampiran. Sebelum ISSUED, surat dicetak dengan tanda DRAFT.
+     */
     public function printApr(Request $request)
     {
         $data = $this->canView() ? $this->aprRepo->printData((int) $request->query('id')) : null;
@@ -193,7 +197,20 @@ class AprController extends Controller
             abort(404);
         }
 
-        return $this->pdf('apr.pdf-apr', $data)->stream($this->fileName('APR', $data->Apr->doc_no));
+        $merger = new PdfMerger();
+        $merger->addPdfString($this->pdf('apr.pdf-letter', $data)->output());
+        $merger->addPdfString($this->pdf('apr.pdf-apr', $data)->output());
+        foreach ($data->Apr->attachments()->orderBy('apr_attachment_id')->get() as $att) {
+            $path = Storage::disk(AprAttachmentRepo::Disk)->path($att->stored_path);
+            if (is_file($path)) {
+                $merger->addAttachment($path, $att->file_name);
+            }
+        }
+
+        return response($merger->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $this->fileName('APR', $data->Apr->doc_no) . '"',
+        ]);
     }
 
     /** Surat Price Confirmation ke supplier + lampiran daftar harga. Hanya untuk dokumen yang sudah ISSUED. */
@@ -209,7 +226,11 @@ class AprController extends Controller
 
     private function pdf(string $view, object $data): \Barryvdh\DomPDF\PDF
     {
-        return Pdf::loadView($view, ['d' => $data, 'company' => config('apr.company')])
+        $company = config('apr.company');
+        $logo = $company['logo'] ? public_path($company['logo']) : null;
+        $company['logo_path'] = $logo && is_file($logo) ? $logo : null;
+
+        return Pdf::loadView($view, ['d' => $data, 'company' => $company])
             ->setPaper('a4', 'portrait')
             // Hanya karakter yang dipakai yang di-embed, supaya file tidak ~900 KB per dokumen.
             ->setOption('isFontSubsettingEnabled', true);

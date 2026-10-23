@@ -11,6 +11,11 @@ return [
         'address' => env('APR_COMPANY_ADDRESS', 'Kawasan Industri Contoh Blok A No. 1, Purwakarta 41181, Jawa Barat - Indonesia'),
         'city' => env('APR_COMPANY_CITY', 'Purwakarta'),
         'department' => env('APR_COMPANY_DEPARTMENT', 'PUD'),
+        // Logo kop surat & form APR (path relatif ke folder public, PNG/JPG). Kosong = nama perusahaan sebagai teks.
+        'logo' => env('APR_COMPANY_LOGO'),
+        // Nomor form & revisi yang dicetak di surat Price Confirmation.
+        'letter_form_no' => env('APR_LETTER_FORM_NO', 'PUD/FR-CSP-00/003'),
+        'letter_rev' => env('APR_LETTER_REV', 'Rev. 00'),
     ],
 
     // Pemilik aplikasi di footer halaman login: "© {tahun} {login_footer}. All rights reserved."

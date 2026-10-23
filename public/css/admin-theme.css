@@ -1572,6 +1572,10 @@ body.adm-body {
     white-space: nowrap;
 }
 
+/* tombol berupa <a>: hilangkan underline bawaan link */
+.dp-btn:hover,
+.dp-btn:focus { text-decoration: none; }
+
 .dp-btn-primary {
     background: #2450D8;
     border-color: #2450D8;
